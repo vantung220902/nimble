@@ -1,11 +1,17 @@
-import { UserStatus } from '@prisma/client';
+import { ProcessingStatus } from '@prisma/client';
 import { ApiProperty } from '@nestjs/swagger';
+import { FileKeywordsUploadEntity } from './file-keywords-upload.entity';
+import { CrawlContentEntity } from './crawl-content.entity';
 
-export class UserDto {
+export class KeywordEntity {
   @ApiProperty({
     required: false,
   })
   id: string;
+  @ApiProperty({
+    required: false,
+  })
+  content: string;
   @ApiProperty({
     type: 'string',
     format: 'date-time',
@@ -16,34 +22,25 @@ export class UserDto {
     type: 'string',
     format: 'date-time',
     required: false,
+    nullable: true,
   })
-  updatedAt: Date;
+  resolvedAt: Date | null;
   @ApiProperty({
     required: false,
   })
-  firstName: string;
+  fileUploadId: string;
+  @ApiProperty({
+    enum: ProcessingStatus,
+    required: false,
+  })
+  status: ProcessingStatus;
   @ApiProperty({
     required: false,
   })
-  lastName: string;
+  fileUpload?: FileKeywordsUploadEntity;
   @ApiProperty({
-    required: false,
-  })
-  email: string;
-  @ApiProperty({
-    type: 'string',
-    format: 'date-time',
     required: false,
     nullable: true,
   })
-  emailVerified: Date | null;
-  @ApiProperty({
-    required: false,
-  })
-  hashedPassword: string;
-  @ApiProperty({
-    enum: UserStatus,
-    required: false,
-  })
-  status: UserStatus;
+  crawledContent?: CrawlContentEntity | null;
 }

@@ -1,39 +1,40 @@
 import {
   IsDateString,
+  IsInt,
   IsNotEmpty,
   IsOptional,
   IsString,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
-export class CreateUserDto {
+export class CreateFileKeywordsUploadDto {
   @ApiProperty()
   @IsNotEmpty()
   @IsString()
   id: string;
-  @ApiProperty()
-  @IsNotEmpty()
-  @IsString()
-  firstName: string;
-  @ApiProperty()
-  @IsNotEmpty()
-  @IsString()
-  lastName: string;
-  @ApiProperty()
-  @IsNotEmpty()
-  @IsString()
-  email: string;
   @ApiProperty({
     type: 'string',
     format: 'date-time',
+  })
+  @IsNotEmpty()
+  @IsDateString()
+  uploadedAt: Date;
+  @ApiProperty()
+  @IsNotEmpty()
+  @IsString()
+  fileUrl: string;
+  @ApiProperty({
+    type: 'integer',
+    format: 'int32',
+  })
+  @IsNotEmpty()
+  @IsInt()
+  totalKeywords: number;
+  @ApiProperty({
     required: false,
     nullable: true,
   })
   @IsOptional()
-  @IsDateString()
-  emailVerified?: Date;
-  @ApiProperty()
-  @IsNotEmpty()
   @IsString()
-  hashedPassword: string;
+  connectionId?: string;
 }

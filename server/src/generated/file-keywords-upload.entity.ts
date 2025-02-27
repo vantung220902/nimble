@@ -1,7 +1,9 @@
-import { UserStatus } from '@prisma/client';
+import { ProcessingStatus } from '@prisma/client';
 import { ApiProperty } from '@nestjs/swagger';
+import { UserEntity } from './user.entity';
+import { KeywordEntity } from './keyword.entity';
 
-export class UserDto {
+export class FileKeywordsUploadEntity {
   @ApiProperty({
     required: false,
   })
@@ -17,33 +19,38 @@ export class UserDto {
     format: 'date-time',
     required: false,
   })
-  updatedAt: Date;
+  uploadedAt: Date;
   @ApiProperty({
     required: false,
   })
-  firstName: string;
+  userId: string;
   @ApiProperty({
     required: false,
   })
-  lastName: string;
+  fileUrl: string;
   @ApiProperty({
+    type: 'integer',
+    format: 'int32',
     required: false,
   })
-  email: string;
+  totalKeywords: number;
   @ApiProperty({
-    type: 'string',
-    format: 'date-time',
+    enum: ProcessingStatus,
+    required: false,
+  })
+  status: ProcessingStatus;
+  @ApiProperty({
     required: false,
     nullable: true,
   })
-  emailVerified: Date | null;
+  connectionId: string | null;
   @ApiProperty({
     required: false,
   })
-  hashedPassword: string;
+  createdBy?: UserEntity;
   @ApiProperty({
-    enum: UserStatus,
+    isArray: true,
     required: false,
   })
-  status: UserStatus;
+  keywords?: KeywordEntity[];
 }

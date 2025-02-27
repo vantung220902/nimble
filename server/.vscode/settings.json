@@ -34,5 +34,16 @@
   "jest.enableSnapshotPreviews": false,
   "jest.enableCodeLens": false,
   "eslint.workingDirectories": ["server"],
-  "cSpell.words": ["Nimble", "auths", "cqrs", "nestjs"]
+  "cSpell.words": [
+    "auths",
+    "cqrs",
+    "ixdate",
+    "ixfk",
+    "ixid",
+    "ixtext",
+    "ixuq",
+    "nestjs",
+    "Nimble",
+    "Timestamptz"
+  ]
 }
