@@ -31,6 +31,7 @@ generator nestjsDto {
 enum UserStatus {
   ACTIVE
   INACTIVE
+  UNVERIFIED
 }
 
 enum ProcessingStatus {
@@ -41,7 +42,7 @@ enum ProcessingStatus {
 }
 
 model User {
-  id             String     @id(map: "pk_user") @map("id") @db.Uuid
+  id             String     @id(map: "pk_user") @default(dbgenerated("gen_random_uuid()")) @map("id") @db.Uuid
   createdAt      DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt      DateTime   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   firstName      String     @map("first_name") @db.VarChar(100)
@@ -60,7 +61,7 @@ model User {
 }
 
 model FileKeywordsUpload {
-  id            String           @id(map: "pk_file_keywords_upload") @map("id") @db.Uuid
+  id            String           @id(map: "pk_file_keywords_upload") @default(dbgenerated("gen_random_uuid()")) @map("id") @db.Uuid
   createdAt     DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
   uploadedAt    DateTime         @map("uploaded_at") @db.Timestamptz(6)
   userId        String           @map("user_id") @db.Uuid
@@ -80,7 +81,7 @@ model FileKeywordsUpload {
 }
 
 model Keyword {
-  id           String           @id(map: "pk_keyword") @map("id") @db.Uuid
+  id           String           @id(map: "pk_keyword") @default(dbgenerated("gen_random_uuid()")) @map("id") @db.Uuid
   content      String           @db.Text
   createdAt    DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
   resolvedAt   DateTime?        @map("resolved_at") @db.Timestamptz(6)
@@ -100,7 +101,7 @@ model Keyword {
 }
 
 model CrawlContent {
-  id             String   @id(map: "pk_crawl_content") @map("id") @db.Uuid
+  id             String   @id(map: "pk_crawl_content") @default(dbgenerated("gen_random_uuid()")) @map("id") @db.Uuid
   keywordId      String   @db.Uuid
   totalGoogleAds Int      @default(0) @map("total_google_ads") @db.Integer
   links          Json     @default("[]") @db.Json

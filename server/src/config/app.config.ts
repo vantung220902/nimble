@@ -11,6 +11,13 @@ export const appSchema = {
   API_URL: Joi.string(),
   API_KEY: Joi.string(),
   STAGE: Joi.string().default('dev'),
+  JWT_SECRET: Joi.string(),
+  REDIS_HOST: Joi.string(),
+  REDIS_URL: Joi.string(),
+  JWT_EXPIRES_IN: Joi.string(),
+  EMAIL_FORM: Joi.string(),
+  SENDGRID_API_KEY: Joi.string(),
+  WEB_URL: Joi.string(),
 };
 
 export const appConfig = registerAs('app', () => ({
@@ -20,6 +27,12 @@ export const appConfig = registerAs('app', () => ({
   apiUrl: process.env.API_URL,
   apiKey: process.env.API_KEY,
   stage: process.env.STAGE,
+  jwtSecret: process.env.JWT_SECRET,
+  redisUrl: process.env.REDIS_URL,
+  jwtExpiresIn: process.env.JWT_EXPIRES_IN,
+  emailForm: process.env.EMAIL_FORM,
+  sendGridApiKey: process.env.SENDGRID_API_KEY,
+  webUrl: process.env.WEB_URL,
 }));
 
 export type Environment =
@@ -47,6 +60,12 @@ export class AppConfig {
   public readonly apiUrl: string;
   public readonly apiKey: string;
   public readonly stage: Stage;
+  public readonly jwtSecret: string;
+  public readonly redisUrl: string;
+  public readonly jwtExpiresIn: string;
+  public readonly emailForm: string;
+  public readonly sendGridApiKey: string;
+  public readonly webUrl: string;
 
   public get isLocal(): boolean {
     return this.env === 'local';
@@ -66,5 +85,11 @@ export class AppConfig {
     this.apiUrl = config.apiUrl!;
     this.apiKey = config.apiKey?.split(',')?.[0];
     this.stage = config.stage as Stage;
+    this.jwtSecret = config.jwtSecret!;
+    this.redisUrl = config.redisUrl!;
+    this.jwtExpiresIn = config.jwtExpiresIn!;
+    this.emailForm = config.emailForm!;
+    this.sendGridApiKey = config.sendGridApiKey!;
+    this.webUrl = config.webUrl!;
   }
 }

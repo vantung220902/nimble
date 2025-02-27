@@ -10,10 +10,6 @@ export class CreateKeywordDto {
   @ApiProperty()
   @IsNotEmpty()
   @IsString()
-  id: string;
-  @ApiProperty()
-  @IsNotEmpty()
-  @IsString()
   content: string;
   @ApiProperty({
     type: 'string',

@@ -8,10 +8,6 @@ import {
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateFileKeywordsUploadDto {
-  @ApiProperty()
-  @IsNotEmpty()
-  @IsString()
-  id: string;
   @ApiProperty({
     type: 'string',
     format: 'date-time',

@@ -4,6 +4,7 @@
         "ixfk",
         "ixid",
         "ixtext",
-        "ixuq"
+        "ixuq",
+        "SENDGRID"
     ]
 }

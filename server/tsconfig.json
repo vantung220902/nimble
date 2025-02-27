@@ -26,7 +26,9 @@
       "@logger": ["src/logger"],
       "@logger/*": ["src/logger/*"],
       "@database": ["src/database"],
-      "@database/*": ["src/database/*"]
+      "@database/*": ["src/database/*"],
+      "@email": ["src/email"],
+      "@email/*": ["src/email/*"]
     }
   },
   "exclude": ["node_modules", "dist"]
