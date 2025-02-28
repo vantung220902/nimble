@@ -7,6 +7,7 @@ import { CacheModule } from '@nestjs/cache-manager';
 import { createKeyv } from '@keyv/redis';
 import { EmailModule } from '@email';
 import { DatabaseModule } from '@database';
+import { UserAccessManagementModule } from '@modules/user-access-management';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { DatabaseModule } from '@database';
       }),
     }),
     EmailModule,
+    UserAccessManagementModule,
   ],
   controllers: [],
   providers: [],
