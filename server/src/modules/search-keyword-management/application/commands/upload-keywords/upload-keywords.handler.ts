@@ -5,6 +5,7 @@ import { MAXIMUM_KEYWORDS_PROCESS } from '@modules/search-keyword-management/sea
 import { BadRequestException } from '@nestjs/common';
 import { CommandHandler } from '@nestjs/cqrs';
 import { ProcessingStatus } from '@prisma/client';
+
 import { UploadKeywordsCommand } from './upload-keywords.command';
 import { UploadKeywordsCommandResponse } from './upload-keywords.response';
 
@@ -26,7 +27,7 @@ export class UploadKeywordsHandler extends CommandHandlerBase<
     return this.uploadKeywords(command);
   }
 
-  public async uploadKeywords({
+  private async uploadKeywords({
     body: { url },
     reqUser,
   }: UploadKeywordsCommand): Promise<UploadKeywordsCommandResponse> {
