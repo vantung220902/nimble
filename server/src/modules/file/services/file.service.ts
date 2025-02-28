@@ -7,6 +7,8 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { normalizeFileName } from '@common/utils';
 import { AppConfig } from '@config';
 import { Injectable } from '@nestjs/common';
+import csv from 'csv-parser';
+import { Readable } from 'stream';
 import { v4 as uuidv4 } from 'uuid';
 import { GetPrivateWriteUrlRequestQuery } from '../application/queries/get-private-write-url/get-private-write-url.request-query';
 import { GetPrivateReadUrlDto } from '../dtos';
@@ -18,14 +20,39 @@ export class FileService {
 
   constructor(private readonly appConfig: AppConfig) {}
 
+  public async getContentFromUrl(url: string) {
+    const { bucket, key } = this.getParamFromUrl(url);
+
+    const getObjectCommand = new GetObjectCommand({
+      Bucket: bucket,
+      Key: key,
+    });
+
+    const { Body } = await this.s3Client.send(getObjectCommand);
+    const stream = Body as Readable;
+
+    const keywords: string[] = [];
+
+    return new Promise((resolve, reject) => {
+      stream
+        .pipe(csv())
+        .on('data', (row: string) => {
+          console.log('row', row);
+          const keyword = Object.values(row).shift()?.toString().trim();
+          if (keyword) {
+            keywords.push(keyword);
+          }
+        })
+        .on('end', () => resolve(keywords))
+        .on('error', (error) => reject(error));
+    });
+  }
+
   public async getPrivateReadUrl(
     option: GetPrivateReadUrlDto,
   ): Promise<string> {
     const { filePath } = option;
-
-    const { hostname, pathname } = new URL(filePath);
-    const bucket = hostname.split('.')[0];
-    const key = pathname.slice(1);
+    const { bucket, key } = this.getParamFromUrl(filePath);
 
     const url = await getSignedUrl(
       this.s3Client,
@@ -64,5 +91,13 @@ export class FileService {
     );
 
     return url;
+  }
+
+  private getParamFromUrl(url: string) {
+    const { hostname, pathname } = new URL(url);
+    const bucket = hostname.split('.')[0];
+    const key = pathname.slice(1);
+
+    return { bucket, key };
   }
 }
