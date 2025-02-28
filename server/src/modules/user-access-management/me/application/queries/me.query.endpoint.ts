@@ -11,8 +11,8 @@ import {
 } from '@nestjs/common';
 import { QueryBus } from '@nestjs/cqrs';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { GetMyProfileQuery } from './getMyProfile/getMyProfile.query';
-import { GetMyProfileQueryResponse } from './getMyProfile/getMyProfile.response';
+import { GetMyProfileQuery } from './get-my-profile/get-my-profile.query';
+import { GetMyProfileQueryResponse } from './get-my-profile/get-my-profile.response';
 
 @ApiTags('User Access Management')
 @ApiBearerAuth()

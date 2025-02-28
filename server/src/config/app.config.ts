@@ -18,6 +18,7 @@ export const appSchema = {
   EMAIL_FORM: Joi.string(),
   SENDGRID_API_KEY: Joi.string(),
   WEB_URL: Joi.string(),
+  AWS_S3_STORAGE_BUCKET_ARN: Joi.string(),
 };
 
 export const appConfig = registerAs('app', () => ({
@@ -33,6 +34,7 @@ export const appConfig = registerAs('app', () => ({
   emailForm: process.env.EMAIL_FORM,
   sendGridApiKey: process.env.SENDGRID_API_KEY,
   webUrl: process.env.WEB_URL,
+  bucketS3Name: process.env.AWS_S3_STORAGE_BUCKET,
 }));
 
 export type Environment =
@@ -66,6 +68,7 @@ export class AppConfig {
   public readonly emailForm: string;
   public readonly sendGridApiKey: string;
   public readonly webUrl: string;
+  public readonly bucketS3Name: string;
 
   public get isLocal(): boolean {
     return this.env === 'local';
@@ -91,5 +94,6 @@ export class AppConfig {
     this.emailForm = config.emailForm!;
     this.sendGridApiKey = config.sendGridApiKey!;
     this.webUrl = config.webUrl!;
+    this.bucketS3Name = config.bucketS3Name!;
   }
 }

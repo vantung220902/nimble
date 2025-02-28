@@ -8,6 +8,7 @@ import { createKeyv } from '@keyv/redis';
 import { EmailModule } from '@email';
 import { DatabaseModule } from '@database';
 import { UserAccessManagementModule } from '@modules/user-access-management';
+import { FileModule } from '@modules/file';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { UserAccessManagementModule } from '@modules/user-access-management';
     }),
     EmailModule,
     UserAccessManagementModule,
+    FileModule,
   ],
   controllers: [],
   providers: [],

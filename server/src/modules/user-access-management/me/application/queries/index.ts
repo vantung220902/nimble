@@ -1,3 +1,3 @@
 export * from './me.query.endpoint';
 
-export * from './getMyProfile';
+export * from './get-my-profile';

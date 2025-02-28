@@ -2,8 +2,8 @@ import { QueryHandlerBase } from '@common/cqrs';
 import { PrismaService } from '@database';
 import { BadRequestException } from '@nestjs/common';
 import { QueryHandler } from '@nestjs/cqrs';
-import { GetMyProfileQuery } from './getMyProfile.query';
-import { GetMyProfileQueryResponse } from './getMyProfile.response';
+import { GetMyProfileQuery } from './get-my-profile.query';
+import { GetMyProfileQueryResponse } from './get-my-profile.response';
 
 @QueryHandler(GetMyProfileQuery)
 export class GetMyProfileHandler extends QueryHandlerBase<
