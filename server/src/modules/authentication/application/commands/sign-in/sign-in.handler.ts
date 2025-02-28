@@ -27,7 +27,7 @@ export class SignInHandler extends CommandHandlerBase<
     return this.signIn(command);
   }
 
-  public async signIn({
+  private async signIn({
     body: { email, password },
   }: SignInCommand): Promise<SignInCommandResponse> {
     const foundUser = await this.dbContext.user.findUnique({

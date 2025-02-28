@@ -20,7 +20,7 @@ export class LogoutHandler extends CommandHandlerBase<LogoutCommand, void> {
     return this.logout(command);
   }
 
-  public async logout({ accessToken, reqUser }: LogoutCommand): Promise<void> {
+  private async logout({ accessToken, reqUser }: LogoutCommand): Promise<void> {
     const decodedAccessToken = await this.jwtService.decode(accessToken);
     const accessTokenJwtExpiresIn = decodedAccessToken.exp * 1000;
 

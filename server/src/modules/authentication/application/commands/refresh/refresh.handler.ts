@@ -26,7 +26,7 @@ export class RefreshHandler extends CommandHandlerBase<
     return this.refresh(command);
   }
 
-  public async refresh({
+  private async refresh({
     reqUser,
   }: RefreshCommand): Promise<RefreshCommandResponse> {
     const { accessToken, refreshToken } = await this.authService.generateToken({

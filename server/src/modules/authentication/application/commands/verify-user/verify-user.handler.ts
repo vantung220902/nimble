@@ -27,7 +27,7 @@ export class VerifyUserHandler extends CommandHandlerBase<
     return this.verifyUser(command);
   }
 
-  public async verifyUser({
+  private async verifyUser({
     body: { email, code },
   }: VerifyUserCommand): Promise<void> {
     const verificationCacheKey =

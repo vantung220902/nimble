@@ -27,7 +27,7 @@ export class SignUpHandler extends CommandHandlerBase<SignUpCommand, void> {
     return this.signUp(command);
   }
 
-  public async signUp({
+  private async signUp({
     body: { email, password, firstName, lastName },
   }: SignUpCommand): Promise<void> {
     const isEmailExisted = await this.authService.isEmailExisted(email);

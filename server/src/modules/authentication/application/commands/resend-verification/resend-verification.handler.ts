@@ -24,7 +24,7 @@ export class ResendVerificationHandler extends CommandHandlerBase<
     return this.resendVerification(command);
   }
 
-  public async resendVerification({
+  private async resendVerification({
     body: { email },
   }: ResendVerificationCommand): Promise<void> {
     const cachedUser = await this.cacheService.get<UserDto>(email);
