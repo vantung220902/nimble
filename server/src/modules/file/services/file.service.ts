@@ -20,7 +20,7 @@ export class FileService {
 
   constructor(private readonly appConfig: AppConfig) {}
 
-  public async getContentFromUrl(url: string) {
+  public async getContentFromUrl(url: string): Promise<string[]> {
     const { bucket, key } = this.getParamFromUrl(url);
 
     const getObjectCommand = new GetObjectCommand({
@@ -33,12 +33,11 @@ export class FileService {
 
     const keywords: string[] = [];
 
-    return new Promise((resolve, reject) => {
+    return new Promise<string[]>((resolve, reject) => {
       stream
         .pipe(csv())
         .on('data', (row: string) => {
-          console.log('row', row);
-          const keyword = Object.values(row).shift()?.toString().trim();
+          const keyword = Object.values(row).pop()?.toString().trim();
           if (keyword) {
             keywords.push(keyword);
           }

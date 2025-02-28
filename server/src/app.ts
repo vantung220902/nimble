@@ -6,6 +6,7 @@ import { createKeyv } from '@keyv/redis';
 import { LoggerModule } from '@logger';
 import { AuthenticationModule } from '@modules/authentication';
 import { FileModule } from '@modules/file';
+import { SearchKeywordManagementModule } from '@modules/search-keyword-management';
 import { UserAccessManagementModule } from '@modules/user-access-management';
 import { RedisModule } from '@nestjs-modules/ioredis';
 import { CacheModule } from '@nestjs/cache-manager';
@@ -29,6 +30,7 @@ import { Module } from '@nestjs/common';
     UserAccessManagementModule,
     FileModule,
     RedisModule,
+    SearchKeywordManagementModule,
   ],
   controllers: [],
   providers: [],

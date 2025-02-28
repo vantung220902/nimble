@@ -28,7 +28,9 @@
       "@database": ["src/database"],
       "@database/*": ["src/database/*"],
       "@email": ["src/email"],
-      "@email/*": ["src/email/*"]
+      "@email/*": ["src/email/*"],
+      "@redis": ["src/redis"],
+      "@redis/*": ["src/redis/*"]
     }
   },
   "exclude": ["node_modules", "dist"]
