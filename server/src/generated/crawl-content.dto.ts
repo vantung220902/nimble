@@ -1,4 +1,3 @@
-import { Prisma } from '@prisma/client';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CrawlContentDto {
@@ -13,9 +12,11 @@ export class CrawlContentDto {
   })
   totalGoogleAds: number;
   @ApiProperty({
+    type: 'integer',
+    format: 'int32',
     required: false,
   })
-  links: Prisma.JsonValue;
+  totalLinks: number;
   @ApiProperty({
     required: false,
   })

@@ -1,11 +1,12 @@
 import { CommandHandlerBase } from '@common/cqrs';
 import { PrismaService } from '@database';
 import { FileService } from '@modules/file/services';
+import { ProcessKeywordsCommand } from '@modules/search-keyword-management/application/commands/process-keywords/process-keywords.command';
+import { ProcessKeywordsRequestBody } from '@modules/search-keyword-management/application/commands/process-keywords/process-keywords.request-body';
 import { MAXIMUM_KEYWORDS_PROCESS } from '@modules/search-keyword-management/search-keyword-management.enum';
 import { BadRequestException } from '@nestjs/common';
-import { CommandHandler } from '@nestjs/cqrs';
+import { CommandBus, CommandHandler } from '@nestjs/cqrs';
 import { ProcessingStatus } from '@prisma/client';
-
 import { UploadKeywordsCommand } from './upload-keywords.command';
 import { UploadKeywordsCommandResponse } from './upload-keywords.response';
 
@@ -17,6 +18,7 @@ export class UploadKeywordsHandler extends CommandHandlerBase<
   constructor(
     private readonly dbContext: PrismaService,
     private readonly fileService: FileService,
+    private commandBus: CommandBus,
   ) {
     super();
   }
@@ -24,10 +26,14 @@ export class UploadKeywordsHandler extends CommandHandlerBase<
   public execute(
     command: UploadKeywordsCommand,
   ): Promise<UploadKeywordsCommandResponse> {
-    return this.uploadKeywords(command);
+    return this.upload(command);
   }
 
-  private async uploadKeywords({
+  private async triggerProcessKeywords(option: ProcessKeywordsRequestBody) {
+    return this.commandBus.execute(new ProcessKeywordsCommand(option));
+  }
+
+  private async upload({
     body: { url },
     reqUser,
   }: UploadKeywordsCommand): Promise<UploadKeywordsCommandResponse> {
@@ -52,9 +58,16 @@ export class UploadKeywordsHandler extends CommandHandlerBase<
         uploadedAt: new Date(),
       },
     });
+    const connectionId = createdFileKeywords.id;
+
+    await this.triggerProcessKeywords({
+      keywords,
+      connectionId,
+      fileUploadId: createdFileKeywords.id,
+    });
 
     return {
-      connectionId: createdFileKeywords.id,
+      connectionId,
       totalKeyword: keywords.length,
     };
   }

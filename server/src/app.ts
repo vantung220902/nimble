@@ -5,6 +5,7 @@ import { HealthModule } from '@health';
 import { createKeyv } from '@keyv/redis';
 import { LoggerModule } from '@logger';
 import { AuthenticationModule } from '@modules/authentication';
+import { CrawlerModule } from '@modules/crawler';
 import { FileModule } from '@modules/file';
 import { SearchKeywordManagementModule } from '@modules/search-keyword-management';
 import { UserAccessManagementModule } from '@modules/user-access-management';
@@ -31,6 +32,7 @@ import { Module } from '@nestjs/common';
     FileModule,
     RedisModule,
     SearchKeywordManagementModule,
+    CrawlerModule,
   ],
   controllers: [],
   providers: [],
