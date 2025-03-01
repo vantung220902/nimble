@@ -4,10 +4,10 @@ import { Inject } from '@nestjs/common';
 import { CommandHandler } from '@nestjs/cqrs';
 import { JwtService } from '@nestjs/jwt';
 import { Cache } from 'cache-manager';
-import { LogoutCommand } from './logout.command';
+import { SignOutCommand } from './sign-out.command';
 
-@CommandHandler(LogoutCommand)
-export class LogoutHandler extends CommandHandlerBase<LogoutCommand, void> {
+@CommandHandler(SignOutCommand)
+export class SignOutHandler extends CommandHandlerBase<SignOutCommand, void> {
   constructor(
     private readonly jwtService: JwtService,
     @Inject(CACHE_MANAGER)
@@ -16,11 +16,14 @@ export class LogoutHandler extends CommandHandlerBase<LogoutCommand, void> {
     super();
   }
 
-  public execute(command: LogoutCommand): Promise<void> {
-    return this.logout(command);
+  public execute(command: SignOutCommand): Promise<void> {
+    return this.signOut(command);
   }
 
-  private async logout({ accessToken, reqUser }: LogoutCommand): Promise<void> {
+  private async signOut({
+    accessToken,
+    reqUser,
+  }: SignOutCommand): Promise<void> {
     const decodedAccessToken = await this.jwtService.decode(accessToken);
     const accessTokenJwtExpiresIn = decodedAccessToken.exp * 1000;
 
