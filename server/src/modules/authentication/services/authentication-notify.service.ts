@@ -1,10 +1,10 @@
 import { EmailService } from '@email/services';
 import { UserDto } from '@generated';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Inject, Injectable } from '@nestjs/common';
 import { Cache } from 'cache-manager';
 import { EXPIRATION_VERIFICATION_CODE_SECONDS } from '../authentication.enum';
 import { AuthenticationService } from './authentication.service';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
 
 @Injectable()
 export class AuthenticationNotifyService {
@@ -20,7 +20,6 @@ export class AuthenticationNotifyService {
     const verificationCacheKey = this.authService.getVerificationCacheKey(
       user.email,
     );
-    console.log('verificationCacheKey', verificationCacheKey);
 
     const verificationLink = this.authService.generateVerificationLink(
       user.email,

@@ -73,7 +73,6 @@ const debouncedNetworkError = _.debounce((status: number) => {
 export const configApiInstance = (api: ApisauceInstance) => {
   api.addRequestTransform((request) => {
     const accessToken = TokenService.getToken().accessToken;
-    console.log('accessToken', accessToken);
 
     if (accessToken) {
       request.headers.Authorization = `Bearer ${accessToken}`;
