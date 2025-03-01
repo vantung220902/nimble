@@ -1,4 +1,5 @@
 import { DatabaseModule } from '@database';
+import { CrawlerModule } from '@modules/crawler';
 import { FileModule } from '@modules/file';
 import { Module } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
@@ -13,7 +14,7 @@ const handlers = applications.filter((x) => x.name.endsWith('Handler'));
 const Services = [...Object.values(services)];
 
 @Module({
-  imports: [CqrsModule, DatabaseModule, RedisModule, FileModule],
+  imports: [CqrsModule, DatabaseModule, RedisModule, FileModule, CrawlerModule],
   controllers: [...endpoints],
   providers: [...Services, ...handlers],
   exports: [...Services],
