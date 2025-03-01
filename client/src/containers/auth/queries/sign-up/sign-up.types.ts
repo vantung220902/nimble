@@ -1,7 +1,7 @@
-import { SignInPayload, SignInResponse } from '..';
+import { SignInPayload } from '..';
 
-export type RegisterPayload = SignInPayload & {};
-
-export type RegisterResponse = SignInResponse & {
-  token: string;
+export type SignUpPayload = SignInPayload & {
+  confirmPassword: string;
+  firstName: string;
+  lastName: string;
 };

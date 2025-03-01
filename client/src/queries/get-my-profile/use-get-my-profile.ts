@@ -8,7 +8,7 @@ const QUERY_KEY = {
   MY_PROFILE: '/me',
 };
 
-export function useGetMyProfile() {
+export function useGetMyProfile(enabled = true) {
   const {
     data,
     error,
@@ -23,6 +23,7 @@ export function useGetMyProfile() {
     },
     notifyOnChangeProps: ['data', 'isFetching'],
     select: getResponseData,
+    enabled,
   });
 
   const queryClient = useQueryClient();
