@@ -1,0 +1,73 @@
+User-agent: *
+Allow: /explore
+Allow: /explore/*+*
+Allow: /explore/*%2B*
+Allow: /explore/*%2b*
+
+Allow: /explore/provinces
+Allow: /explore/provinces/*+*
+Allow: /explore/provinces/*%2B*
+Allow: /explore/provinces/*%2b*
+
+Allow: /explore/celebrities
+Allow: /explore/celebrities/*+*
+Allow: /explore/celebrities/*%2B*
+Allow: /explore/celebrities/*%2b*
+
+Allow: /profile
+Allow: /profile/*+*
+Allow: /profile/*%2B*
+Allow: /profile/*%2b*
+
+Allow: /profile/history
+Allow: /profile/history/*+*
+Allow: /profile/history/*%2B*
+Allow: /profile/history/*%2b*
+
+Allow: /profile/saved
+Allow: /profile/saved/*+*
+Allow: /profile/saved/*%2B*
+Allow: /profile/saved/*%2b*
+
+Allow: /profile/settings
+Allow: /profile/settings/*+*
+Allow: /profile/settings/*%2B*
+Allow: /profile/settings/*%2b*
+
+Allow: /articles/categories
+Allow: /articles/categories/*+*
+Allow: /articles/categories/*%2B*
+Allow: /articles/categories/*%2b*
+
+Allow: /articles/keywords
+Allow: /articles/keywords/*+*
+Allow: /articles/keywords/*%2B*
+Allow: /articles/keywords/*%2b*
+
+Allow: /for-you
+
+Allow: /policy
+
+Allow: /term-of-service
+
+User-agent: adsbot-google
+Allow: /products
+Allow: /blog
+Allow: /stores
+Allow: /about
+
+User-agent: Nutch
+Allow: /
+
+User-agent: MJ12bot
+Crawl-delay: 10
+
+User-agent: Pinterest
+Crawl-delay: 1
+
+User-agent: Mediapartners-Google
+Allow: /search
+
+Disallow: /*?updated-max=*
+
+Disallow: *archive.html
