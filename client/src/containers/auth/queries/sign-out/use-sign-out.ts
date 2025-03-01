@@ -5,7 +5,7 @@ import { useMutation, UseMutationOptions } from '@tanstack/react-query';
 export function useSignOut(options?: UseMutationOptions<{}, Error, {}>) {
   const {
     mutate: onSignOut,
-    isPending: isSubmitting,
+    isPending: isLoading,
     isSuccess,
     isError,
     error,
@@ -16,7 +16,7 @@ export function useSignOut(options?: UseMutationOptions<{}, Error, {}>) {
 
   return {
     onSignOut,
-    isSubmitting,
+    isLoading,
     isSuccess,
     isError,
     error,
