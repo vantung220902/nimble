@@ -63,7 +63,7 @@ export class SignUpRequestBody {
     example: 'Tung',
   })
   @IsNotEmpty()
-  @MaxLength(255)
+  @MaxLength(100)
   @IsString()
   firstName: string;
 
@@ -73,7 +73,7 @@ export class SignUpRequestBody {
     example: 'Nguyen',
   })
   @IsNotEmpty()
-  @MaxLength(255)
+  @MaxLength(100)
   @IsString()
   lastName: string;
 }

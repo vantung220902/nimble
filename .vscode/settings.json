@@ -43,6 +43,7 @@
     "ixuq",
     "nestjs",
     "Nimble",
-    "Timestamptz"
+    "Timestamptz",
+    "Toastify"
   ]
 }
