@@ -2,6 +2,7 @@ import { CommandEndpoint } from '@common/cqrs';
 import { ApiResponse } from '@common/decorators';
 import { AuthenticationGuard } from '@common/guards';
 import { ResponseInterceptor } from '@common/interceptors';
+import { getTokenFromHeader } from '@common/utils';
 import {
   Body,
   Controller,
@@ -13,17 +14,16 @@ import {
 import { CommandBus } from '@nestjs/cqrs';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { RefreshCommand } from './refresh/refresh.command';
+import { ResendVerificationCommand } from './resend-verification/resend-verification.command';
+import { ResendVerificationRequestBody } from './resend-verification/resend-verification.request-body';
 import { SignInCommand } from './sign-in/sign-in.command';
 import { SignInRequestBody } from './sign-in/sign-in.request-body';
 import { SignInCommandResponse } from './sign-in/sign-in.response';
+import { SignOutCommand } from './sign-out/sign-out.command';
 import { SignUpCommand } from './sign-up/sign-up.command';
 import { SignUpRequestBody } from './sign-up/sign-up.request-body';
 import { VerifyUserCommand } from './verify-user/verify-user.command';
 import { VerifyUserRequestBody } from './verify-user/verify-user.request-body';
-import { ResendVerificationRequestBody } from './resend-verification/resend-verification.request-body';
-import { ResendVerificationCommand } from './resend-verification/resend-verification.command';
-import { LogoutCommand } from './logout/logout.command';
-import { getTokenFromHeader } from '@common/utils';
 
 @ApiTags('Authentication')
 @Controller({
@@ -70,12 +70,12 @@ export class AuthenticationCommandEndpoint extends CommandEndpoint {
   @ApiResponse()
   @ApiBearerAuth()
   @UseGuards(AuthenticationGuard)
-  @Post('logout')
+  @Post('sign-out')
   public logout(@Request() request): Promise<void> {
     const accessToken = getTokenFromHeader(request.headers);
 
-    return this.commandBus.execute<LogoutCommand, void>(
-      new LogoutCommand(accessToken, request.user),
+    return this.commandBus.execute<SignOutCommand, void>(
+      new SignOutCommand(accessToken, request.user),
     );
   }
 
