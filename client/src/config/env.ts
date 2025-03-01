@@ -1,0 +1,17 @@
+export const appEnv = {
+  MODE: import.meta.env.MODE,
+  NODE_ENV: import.meta.env.NODE_ENV,
+  APP_VERSION: import.meta.env.VITE_VERSION || '0.1.0',
+  BUILD_MODE: import.meta.env.VITE_BUILD_MODE || 'development',
+  COOKIE_DOMAIN: import.meta.env.VITE_COOKIE_DOMAIN,
+  API_URL: import.meta.env.VITE_API_URL,
+  SHARE_URL: import.meta.env.VITE_SHARE_URL,
+  ASSETS_URL: import.meta.env.VITE_ASSETS_URL,
+  WEB_URL: import.meta.env.VITE_WEB_URL,
+  SHOW_MOCK: import.meta.env.VITE_SHOW_MOCK === 'true',
+  GOOGLE_CLIENT_ID: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+  GOOGLE_MAP_API_KEY: import.meta.env.VITE_GOOGLE_MAP_API_KEY,
+  GOONG_CLIENT_API_KEY: import.meta.env.VITE_GOONG_CLIENT_API_KEY,
+  GOONG_MAP_API_KEY: import.meta.env.VITE_GOONG_MAP_API_KEY,
+  BACKEND_SHARE_DOMAIN: import.meta.env.VITE_BACKEND_SHARE_DOMAIN,
+};
