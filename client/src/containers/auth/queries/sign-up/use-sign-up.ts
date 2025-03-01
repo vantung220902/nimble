@@ -1,16 +1,16 @@
 import { responseWrapper } from '@services';
 import { useMutation, UseMutationOptions } from '@tanstack/react-query';
-import { RegisterApi, RegisterPayload, RegisterResponse } from '.';
+import { SignUpApi, SignUpPayload } from '.';
 
-export function useSignUp(options?: UseMutationOptions<RegisterResponse, Error, RegisterPayload>) {
+export function useSignUp(options?: UseMutationOptions<{}, Error, SignUpPayload>) {
   const {
     mutate: onSignUp,
     isPending: isSubmitting,
     isSuccess,
     isError,
     error,
-  } = useMutation<RegisterResponse, Error, RegisterPayload>({
-    mutationFn: (payload: RegisterPayload) => responseWrapper(RegisterApi.signUp, [payload]),
+  } = useMutation<{}, Error, SignUpPayload>({
+    mutationFn: (payload: SignUpPayload) => responseWrapper(SignUpApi.signUp, [payload]),
     ...options,
   });
 

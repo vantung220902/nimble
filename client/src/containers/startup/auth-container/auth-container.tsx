@@ -5,8 +5,8 @@ import { FC, useEffect } from 'react';
 
 const AuthContainer: FC = () => {
   const { onSetUserProfile, onSetIsAuthenticated } = useAuthStore();
-  const { onGetMyProfile, myProfile } = useGetMyProfile();
   const accessToken = TokenService.getToken().accessToken;
+  const { onGetMyProfile, myProfile } = useGetMyProfile(!!accessToken);
 
   useEffect(() => {
     if (accessToken) {

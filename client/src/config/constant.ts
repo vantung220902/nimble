@@ -9,6 +9,8 @@ const ONE_HOUR = 60 * 60 * ONE_SECOND;
 const ONE_KB = 1024;
 const ONE_MB = ONE_KB * ONE_KB;
 
+const VERIFICATION_CODE_LENGTH = 6;
+
 const commonConfigs = {
   CONNECTION_TIMEOUT: 30 * ONE_SECOND,
   MAXIMUM_FILE_SIZE: ONE_MB * 25,
@@ -42,6 +44,7 @@ const appConstant = {
   ...commonConfigs,
   ...table,
   ...textLength,
+  VERIFICATION_CODE_LENGTH,
 };
 
 export default appConstant;

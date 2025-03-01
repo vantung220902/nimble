@@ -2,13 +2,15 @@ import { Form, FormInputPassword, FormInputText } from '@components';
 import { AppLoadingOverlay } from '@components/app-loading-overlay';
 import { IMAGES } from '@config/images';
 import { authPaths } from '@containers/auth/route';
+import SignUpVerificationModal from '@containers/auth/views/sign-up/sign-up-verification';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { Anchor, Box, Button, Paper, Stack, Text, Title, rem } from '@mantine/core';
 import { createStyles } from '@mantine/styles';
 import { useSignUp } from '@queries';
 import { ErrorService, Toastify } from '@services';
 import { scrollToTopError } from '@services/error.service';
-import { deepKeysHookFormErrors } from '@utils';
+import { useCommonStore } from '@stores';
+import { deepKeysHookFormErrors, waiter } from '@utils';
 import { useState } from 'react';
 import { FieldErrors, useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
@@ -18,17 +20,16 @@ const useStyles = createStyles((theme) => ({
   wrapper: {
     minHeight: '100vh',
     backgroundSize: 'cover',
-    backgroundImage: `url(${IMAGES.background})`,
+    backgroundImage: `url(${IMAGES.nimble})`,
   },
   form: {
     borderRight: `${rem(1)} solid ${
       theme.colorScheme === 'dark' ? theme.colors.dark[7] : theme.colors.gray[3]
     }`,
     minHeight: '100vh',
-    maxWidth: rem(450),
+    maxWidth: rem(500),
     paddingTop: rem(80),
     position: 'relative',
-
     [theme.fn.smallerThan('sm')]: {
       maxWidth: '100%',
     },
@@ -57,11 +58,12 @@ const useStyles = createStyles((theme) => ({
 const SignUp: React.FC = () => {
   const { classes } = useStyles();
   const navigate = useNavigate();
-  const { onSignUp, isSubmitting } = useSignUp();
-
   const [isNavigating, setIsNavigating] = useState(false);
 
-  const { control, handleSubmit, setError } = useForm<SignUpFormType>({
+  const { onSetIsOpenDialog } = useCommonStore();
+
+  const { onSignUp, isSubmitting, isSuccess } = useSignUp();
+  const { control, handleSubmit, setError, getValues } = useForm<SignUpFormType>({
     mode: 'onChange',
     reValidateMode: 'onChange',
     shouldFocusError: true,
@@ -69,8 +71,8 @@ const SignUp: React.FC = () => {
     resolver: yupResolver<any>(SignUpFormHelper.schema),
   });
 
-  const onValidSubmit = (values: SignUpFormType) => {
-    const { email, password, confirmPassword } = values;
+  const onValidSubmit = (value: SignUpFormType) => {
+    const { password, confirmPassword } = value;
 
     if (password !== confirmPassword) {
       setError('confirmPassword', {
@@ -79,16 +81,17 @@ const SignUp: React.FC = () => {
       return null;
     }
 
-    const payload = {
-      email: email.trim(),
-      password: password.trim(),
-    };
+    const payload = Object.entries(value).reduce((acc: { [key: string]: string }, [key, value]) => {
+      acc[key] = value.trim();
+
+      return acc;
+    }, {}) as SignUpFormType;
 
     return onSignUp(payload, {
       onSuccess(data) {
         Toastify.success('Sign up successfully');
-        setIsNavigating(true);
-        navigate(authPaths.signIn);
+
+        onSetIsOpenDialog(true);
       },
       onError(error) {
         ErrorService.handler(error);
@@ -98,6 +101,15 @@ const SignUp: React.FC = () => {
 
   const onInvalidFormSubmit = (formErrors: FieldErrors<SignUpFormType>) => {
     scrollToTopError(deepKeysHookFormErrors(formErrors));
+  };
+
+  const onVerifySuccess = async () => {
+    Toastify.success('Verify account is successfully!');
+    setIsNavigating(true);
+
+    waiter(1000).then(() => {
+      navigate(authPaths.signIn);
+    });
   };
 
   return (
@@ -119,6 +131,25 @@ const SignUp: React.FC = () => {
                 control={control}
                 classNames={{ input: classes.input, label: classes.inputLabel }}
               />
+
+              <FormInputText
+                title="First name"
+                placeholder="Enter your first name"
+                name="firstName"
+                required
+                control={control}
+                classNames={{ input: classes.input, label: classes.inputLabel }}
+              />
+
+              <FormInputText
+                title="Last name"
+                placeholder="Enter your last name"
+                name="lastName"
+                required
+                control={control}
+                classNames={{ input: classes.input, label: classes.inputLabel }}
+              />
+
               <FormInputPassword
                 title="Password"
                 placeholder="Enter your password"
@@ -149,13 +180,17 @@ const SignUp: React.FC = () => {
           </Form>
 
           <Text ta="center" mt="md">
-            Already have an account?
+            Already have an account?{' '}
             <Anchor component={Link} to={authPaths.signIn} fw={700}>
               Sign In
             </Anchor>
           </Text>
         </Paper>
       </Box>
+
+      {isSuccess && (
+        <SignUpVerificationModal email={getValues('email')} onVerifySuccess={onVerifySuccess} />
+      )}
     </Box>
   );
 };

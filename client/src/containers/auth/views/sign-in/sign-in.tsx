@@ -17,7 +17,7 @@ const useStyles = createStyles((theme) => ({
   wrapper: {
     minHeight: '100vh',
     backgroundSize: 'cover',
-    backgroundImage: `url(${IMAGES.background})`,
+    backgroundImage: `url(${IMAGES.nimble})`,
   },
 
   form: {
