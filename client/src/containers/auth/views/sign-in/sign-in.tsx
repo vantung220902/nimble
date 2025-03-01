@@ -85,8 +85,6 @@ const SignIn: React.FC = () => {
   const onValidSubmit = (values: SignInPayload) => {
     const { email, password } = values;
 
-    console.log('email', 'password', email, password);
-
     const payload = {
       email: email.trim(),
       password: password.trim(),
