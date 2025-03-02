@@ -10,6 +10,8 @@ import {
 import { Browser, Page } from 'puppeteer';
 import puppeteer from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
+import UserAgent from 'user-agents';
+puppeteer.use(StealthPlugin());
 
 @Injectable()
 export class CrawlerService implements OnModuleInit, OnModuleDestroy {
@@ -22,15 +24,19 @@ export class CrawlerService implements OnModuleInit, OnModuleDestroy {
       throw new InternalServerErrorException('Cannot launch browser!');
     }
 
+    const generateUserAgent = new UserAgent();
+
     const page = await this.browser.newPage();
 
     try {
-      await page.setUserAgent(GoogleCrawlerOption.userAgent);
+      await page.setUserAgent(generateUserAgent.toString());
       await page.setViewport(GoogleCrawlerOption.viewPort);
+      await page.setExtraHTTPHeaders({
+        'Accept-Language': 'en-GB,en-US;q=0.9,en;q=0.8',
+      });
 
       await page.goto(GoogleCrawlerOption.link, {
         waitUntil: 'networkidle2',
-        timeout: 60000,
       });
 
       await this.detectCaptcha(page);
@@ -42,7 +48,7 @@ export class CrawlerService implements OnModuleInit, OnModuleDestroy {
       try {
         await page.waitForSelector(GoogleCrawlerOption.selector);
       } catch (selectorError) {
-        this.detectCaptcha(page);
+        await this.detectCaptcha(page);
 
         throw selectorError;
       }
@@ -88,17 +94,9 @@ export class CrawlerService implements OnModuleInit, OnModuleDestroy {
 
   async onModuleInit() {
     this.browser = await puppeteer.launch({
-      headless: false,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-infobars',
-        '--window-position=0,0',
-        '--ignore-certificate-errors',
-        '--ignore-certificate-errors-spki-list',
-        '--disable-gpu',
-      ],
-      defaultViewport: null,
+      headless: 'new',
+      args: ['--disable-setuid-sandbox'],
+      ignoreHTTPSErrors: true,
     });
   }
 
@@ -146,5 +144,3 @@ export class CrawlerService implements OnModuleInit, OnModuleDestroy {
     await page.keyboard.press('Enter');
   }
 }
-
-puppeteer.use(StealthPlugin());

@@ -8,11 +8,7 @@ export const GoogleCrawlerOption = {
   primaryAdElement: 'div.RnJeZd.top.pla-unit-title',
   linkTag: 'a',
   viewPort: {
-    width: 1920 + Math.floor(Math.random() * 100),
-    height: 3000 + Math.floor(Math.random() * 100),
-    deviceScaleFactor: 1,
-    hasTouch: false,
-    isLandscape: false,
-    isMobile: false,
+    width: 1200,
+    height: 800,
   },
 };
