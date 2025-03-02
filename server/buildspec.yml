@@ -61,4 +61,3 @@ artifacts:
     - "imageDetail.json"
   discard-paths: yes
   name: BuildArtifact
-  base-directory: server
