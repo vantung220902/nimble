@@ -7,6 +7,8 @@ RUN corepack enable
 
 COPY . .
 
+ENV PUPPETEER_SKIP_DOWNLOAD true
+
 RUN yarn
 
 RUN npx prisma generate
@@ -20,21 +22,50 @@ ENV NODE_ENV production
 
 WORKDIR /usr/src/app
 
+RUN npx puppeteer browsers install chrome
+
 # Install chromium dependencies
 RUN apt-get update \
-  && apt-get install -y chromium \
-  ca-certificates fonts-liberation libasound2 libatk-bridge2.0-0 libatk1.0-0 libc6 libcairo2 libcups2 libdbus-1-3 libexpat1 libfontconfig1 libgbm1 libgcc1 libglib2.0-0 libgtk-3-0 libnspr4 libnss3 libpango-1.0-0 libpangocairo-1.0-0 libstdc++6 libx11-6 libx11-xcb1 libxcb1 libxcomposite1 libxcursor1 libxdamage1 libxext6 libxfixes3 libxi6 libxrandr2 libxrender1 libxss1 libxtst6 lsb-release wget xdg-utils \
-  fonts-noto \
-  fonts-noto-cjk \
-  fonts-noto-color-emoji \
-  fonts-crosextra-carlito \
-  cabextract \
-  xfonts-utils \
-  && wget http://ftp.de.debian.org/debian/pool/contrib/m/msttcorefonts/ttf-mscorefonts-installer_3.8_all.deb \
-  && dpkg -i ttf-mscorefonts-installer_3.8_all.deb \
-  && fc-cache -f -v \
-  && apt-get clean \
-  && rm -rf /var/lib/apt/lists/* ttf-mscorefonts-installer_3.8_all.deb
+  && apt-get install -y \
+  libnss3 libnss3-dev \
+  libnspr4 libnspr4-dev \
+  libdbus-1-3 \
+  libatk1.0-0 libatk-bridge2.0-0 \
+  libcups2 \
+  libdrm2 \
+  libxkbcommon0 \
+  libatspi2.0-0 \
+  libxcomposite1 \
+  libxdamage1 \
+  libxfixes3 \
+  libxrandr2 \
+  libgbm1 \
+  libasound2 \
+  ca-certificates \
+  fonts-liberation \
+  libappindicator3-1 \
+  libc6 \
+  libcairo2 \
+  libexpat1 \
+  libfontconfig1 \
+  libgcc1 \
+  libglib2.0-0 \
+  libgtk-3-0 \
+  libpango-1.0-0 libpangocairo-1.0-0 \
+  libstdc++6 \
+  libx11-6 libx11-xcb1 libxcb1 \
+  libxcursor1 \
+  libxdamage1 \
+  libxext6 \
+  libxfixes3 \
+  libxi6 \
+  libxrandr2 \
+  libxrender1 \
+  libxss1 \
+  libxtst6 \
+  lsb-release \
+  wget \
+  xdg-utils
 
 COPY --from=build /usr/src/app/dist dist
 COPY --from=build /usr/src/app/node_modules node_modules

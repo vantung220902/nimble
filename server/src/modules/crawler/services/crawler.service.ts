@@ -94,7 +94,17 @@ export class CrawlerService implements OnModuleInit, OnModuleDestroy {
   async onModuleInit() {
     this.browser = await puppeteer.launch({
       headless: true,
-      args: ['--disable-setuid-sandbox'],
+      executablePath: puppeteer.executablePath(),
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--single-process',
+        '--incognito',
+        '--disable-client-side-phishing-detection',
+        '--disable-software-rasterizer',
+      ],
       ignoreHTTPSErrors: true,
     });
   }
