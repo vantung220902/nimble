@@ -23,9 +23,6 @@ phases:
   install:
     runtime-versions:
       nodejs: 20
-    commands:
-      - sudo apt-get update
-      - sudo apt-get --assume-yes install chromium-browser
 
   pre_build:
     commands:
