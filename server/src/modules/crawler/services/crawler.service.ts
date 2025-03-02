@@ -35,15 +35,14 @@ export class CrawlerService implements OnModuleInit, OnModuleDestroy {
         'Accept-Language': 'en-GB,en-US;q=0.9,en;q=0.8',
       });
 
-      await page.goto(GoogleCrawlerOption.link, {
-        waitUntil: 'networkidle2',
-      });
+      await page.goto(
+        `${GoogleCrawlerOption.link}/search?q=${encodeURIComponent(keyword)}`,
+        {
+          waitUntil: 'load',
+        },
+      );
 
       await this.detectCaptcha(page);
-
-      await this.resolveCookieButton(page);
-
-      await this.typeKeywordIntoSearchField(page, keyword);
 
       try {
         await page.waitForSelector(GoogleCrawlerOption.selector);
@@ -111,36 +110,5 @@ export class CrawlerService implements OnModuleInit, OnModuleDestroy {
       await page.close();
       throw new InternalServerErrorException('Google CAPTCHA detected');
     }
-  }
-
-  private async resolveCookieButton(page: Page) {
-    const acceptCookieButton = await page.$(
-      GoogleCrawlerOption.cookieButtonElement,
-    );
-    if (acceptCookieButton) {
-      await acceptCookieButton.click();
-      await page.evaluate(
-        () =>
-          new Promise((resolve) =>
-            setTimeout(resolve, 2000 + Math.random() * 1000),
-          ),
-      );
-    }
-  }
-
-  private async typeKeywordIntoSearchField(page: Page, keyword: string) {
-    for (const char of keyword) {
-      await page.type(GoogleCrawlerOption.searchInputElement, char, {
-        delay: 50 + Math.random() * 150,
-      });
-      await page.evaluate(
-        () =>
-          new Promise((resolve) =>
-            setTimeout(resolve, 10 + Math.random() * 50),
-          ),
-      );
-    }
-
-    await page.keyboard.press('Enter');
   }
 }
