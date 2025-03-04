@@ -6,6 +6,7 @@ import {
   IconDashboard,
   IconFileDescription,
   IconFileSearch,
+  IconFileUpload,
 } from '@tabler/icons-react';
 import { FC, useEffect, useState } from 'react';
 import UserButton from './user-button';
@@ -22,11 +23,20 @@ export const Sidebar: FC<SidebarProps> = ({ setWidth }) => {
 
   const options = [
     { label: 'Dashboard', icon: IconDashboard, link: homePaths.home },
-    { label: 'Upload Keywords', icon: IconFileSearch, link: keywordPaths.uploadKeywords },
+    {
+      label: 'Upload Keywords',
+      icon: IconFileUpload,
+      link: keywordPaths.uploadKeywords,
+    },
     {
       label: 'Keywords',
       icon: IconFileDescription,
-      link: '/keywords',
+      link: keywordPaths.keywordList,
+    },
+    {
+      label: 'Uploaded files',
+      icon: IconFileSearch,
+      link: keywordPaths.uploadedFiles,
     },
   ];
 

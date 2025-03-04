@@ -1,31 +1,30 @@
-import { ListKeywordResponse, ListKeywordsApi } from '@queries';
+import { UploadedFilesApi, UploadedFilesResponse } from '@queries';
 import { PaginationResponseType, responseWrapper, TableParams } from '@services';
 import { useQuery, useQueryClient, UseQueryOptions } from '@tanstack/react-query';
 import { isEmpty } from 'lodash';
 import { useState } from 'react';
 
 const QUERY_KEY = {
-  GET_LIST_KEYWORDS: '/list-keywords',
+  GET_UPLOADED_FILES: '/uploaded-files',
 };
 
-export function useGetListKeywords(
-  options?: UseQueryOptions<PaginationResponseType<ListKeywordResponse>, Error>,
+export function useGetUploadedFiles(
+  options?: UseQueryOptions<PaginationResponseType<UploadedFilesResponse>, Error>,
 ) {
   const [params, setParams] = useState<TableParams>({});
-
   const {
     data,
     error,
     isError,
     isFetching,
-    refetch: onGetListKeywords,
-  } = useQuery<PaginationResponseType<ListKeywordResponse>, Error>({
-    queryKey: [QUERY_KEY.GET_LIST_KEYWORDS, params],
+    refetch: onGetUploadedFiles,
+  } = useQuery<PaginationResponseType<UploadedFilesResponse>, Error>({
+    queryKey: [QUERY_KEY.GET_UPLOADED_FILES, params],
     queryFn: (query) => {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const [_, ...params] = query.queryKey;
-      return responseWrapper<PaginationResponseType<ListKeywordResponse>>(
-        ListKeywordsApi.getListKeywords,
+      return responseWrapper<PaginationResponseType<UploadedFilesResponse>>(
+        UploadedFilesApi.getUploadedFiles,
         params,
       );
     },
@@ -38,20 +37,20 @@ export function useGetListKeywords(
 
   const handleInvalidateListProfile = () =>
     queryClient.invalidateQueries({
-      queryKey: [QUERY_KEY.GET_LIST_KEYWORDS],
+      queryKey: [QUERY_KEY.GET_UPLOADED_FILES],
     });
 
-  const { records: keywords = [], hasNext, payloadSize, totalRecords } = data || {};
+  const { records: files = [], hasNext, payloadSize, totalRecords } = data || {};
 
   return {
-    keywords,
+    files,
     hasNext,
     payloadSize,
     totalRecords,
     error,
     isError,
     isFetching,
-    onGetListKeywords,
+    onGetUploadedFiles,
     setParams,
     handleInvalidateListProfile,
   };

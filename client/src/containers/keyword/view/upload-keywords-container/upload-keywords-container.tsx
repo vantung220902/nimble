@@ -73,9 +73,9 @@ const UploadKeywords = () => {
     if (isRefreshing) return;
 
     setIsRefreshing(true);
-    onGetListKeywords().then(({ data }) => {
+    onGetListKeywords().then(({ data: { records } }) => {
       setProcessedKeywords(
-        mapKeywordWithStream(data as never as ListKeywordResponse[], keywordsStream),
+        mapKeywordWithStream(records as never as ListKeywordResponse[], keywordsStream),
       );
     });
 

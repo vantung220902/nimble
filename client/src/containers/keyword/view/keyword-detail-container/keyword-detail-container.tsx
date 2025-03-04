@@ -113,7 +113,9 @@ const KeywordDetail = () => {
           <Group justify="apart" mb="xl">
             <Group>
               <IconCalendar size={18} />
-              <Text c="dimmed">{getDateDisplay(keywordDetail.resolvedAt, 'MMM DD, YYYY')}</Text>
+              <Text c="dimmed">
+                {getDateDisplay(keywordDetail.resolvedAt, 'MMM DD, YYYY HH:mm')}
+              </Text>
             </Group>
             <Badge
               variant="outline"
