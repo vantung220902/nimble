@@ -1,12 +1,13 @@
 import { getStatusClass } from '@containers/keyword/view/upload-keywords-container/helper';
-import { Badge, Stack, Text } from '@mantine/core';
+import { Badge, Code, ScrollArea, Stack, Text, Highlight } from '@mantine/core';
 import { ListKeywordResponse, useGetListKeywords } from '@queries';
 import { MantineReactTable, MRT_ColumnDef, useMantineReactTable } from 'mantine-react-table';
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { createStyles } from '@mantine/styles';
 import { getDateDisplay } from '@utils';
 import { keywordPaths } from '@containers/keyword/route';
+import { KeywordListRowType } from './type';
 
 const useStyles = createStyles((theme) => ({
   statusCompleted: {
@@ -27,14 +28,21 @@ const useStyles = createStyles((theme) => ({
   row: {
     backgroundColor: 'rgba(0, 0, 0, 0.04)',
   },
+  highlight: {
+    backgroundColor: theme.fn.rgba(theme.colors.yellow[4], 0.3),
+    padding: 0,
+  },
 }));
 
 const KeywordListContainer = () => {
   const { classes } = useStyles();
+  const location = useLocation();
+
+  console.log();
 
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const connectionId = searchParams.get('connectionId');
+  const fileUploadId = searchParams.get('fileUploadId');
   const { keywords, setParams, isFetching, totalRecords } = useGetListKeywords();
   const [rowCount, setRowCount] = useState(0);
 
@@ -46,14 +54,16 @@ const KeywordListContainer = () => {
   });
 
   useEffect(() => {
+    const { state } = location as { state: { search: string; isGlobalSearch: string } };
+
     setParams({
-      fileUploadId: connectionId,
+      fileUploadId,
       take: pagination.pageSize,
       skip: pagination.pageIndex * pagination.pageSize,
-      search: globalFilter,
-      isGlobalSearch: false,
+      isGlobalSearch: state?.isGlobalSearch === 'true' || false,
+      search: state?.search || '',
     });
-  }, [setParams, connectionId, pagination.pageSize, pagination.pageIndex, globalFilter]);
+  }, [setParams, fileUploadId, pagination.pageSize, pagination.pageIndex, globalFilter, location]);
 
   useEffect(() => {
     if (totalRecords) {
@@ -61,17 +71,35 @@ const KeywordListContainer = () => {
     }
   }, [totalRecords]);
 
-  const columns = useMemo<MRT_ColumnDef<ListKeywordResponse>[]>(
-    () => [
-      {
-        accessorKey: 'content',
-        header: 'Keyword',
-        enableSorting: false,
-      },
+  const columns = useMemo<MRT_ColumnDef<ListKeywordResponse>[]>(() => {
+    const { state } = location as { state: { search: string; isGlobalSearch: string } };
+
+    const isGlobalSearch = state?.isGlobalSearch === 'true';
+    const contentColumn: MRT_ColumnDef<ListKeywordResponse> = {
+      accessorKey: 'content',
+      header: 'Keyword',
+      enableSorting: false,
+    };
+
+    if (isGlobalSearch) {
+      contentColumn.Cell = ({ row }: KeywordListRowType) => (
+        <Highlight
+          highlight={state?.search}
+          highlightStyles={(theme) => ({
+            backgroundColor: classes.highlight,
+            padding: 0,
+          })}
+        >
+          {row.original.content}
+        </Highlight>
+      );
+    }
+    const baseColumns = [
+      contentColumn,
       {
         accessorKey: 'status',
         header: 'Status',
-        Cell: ({ row }) => (
+        Cell: ({ row }: KeywordListRowType) => (
           <Badge
             variant="outline"
             className={getStatusClass(row.original.status, classes)}
@@ -86,16 +114,58 @@ const KeywordListContainer = () => {
       {
         accessorKey: 'resolvedAt',
         header: 'Search At',
-        Cell: ({ row }) => (
+        Cell: ({ row }: KeywordListRowType) => (
           <Text size="sm" c="dimmed">
             {getDateDisplay(row.original.resolvedAt, 'MMM DD, YYYY HH:mm')}
           </Text>
         ),
         enableSorting: false,
       },
-    ],
-    [classes],
-  );
+    ];
+
+    if (isGlobalSearch) {
+      baseColumns.push(
+        {
+          accessorKey: 'crawledContent.totalLinks',
+          header: 'Total Links',
+          Cell: ({ row }: KeywordListRowType) => (
+            <Text size="sm">{row.original.crawledContent?.totalLinks ?? 0}</Text>
+          ),
+          enableSorting: false,
+        },
+        {
+          accessorKey: 'crawledContent.totalGoogleAds',
+          header: 'Total Ads',
+          Cell: ({ row }: KeywordListRowType) => (
+            <Text size="sm">{row.original.crawledContent?.totalGoogleAds ?? 0}</Text>
+          ),
+          enableSorting: false,
+        },
+        {
+          accessorKey: 'crawledContent.content',
+          header: 'HTML Content',
+          Cell: ({ row }: KeywordListRowType) => (
+            <ScrollArea h={100}>
+              <Code block style={{ maxWidth: '100%', fontSize: '0.8rem' }}>
+                <Highlight
+                  highlight={state?.search}
+                  highlightStyles={(theme) => ({
+                    backgroundColor: classes.highlight,
+                    padding: 0,
+                  })}
+                >
+                  {row.original.crawledContent?.content ?? 'No content available'}
+                </Highlight>
+              </Code>
+            </ScrollArea>
+          ),
+          enableSorting: false,
+        },
+      );
+    }
+
+    return baseColumns;
+  }, [classes, location]);
 
   const handleNavigateToKeywordDetail = (id: string) => {
     const url = `${keywordPaths.keywordDetail.replace(':id', id)}`;
