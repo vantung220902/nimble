@@ -1,9 +1,9 @@
-import CustomRoute from '@containers/custom-route-container';
 import { lazy } from 'react';
 import { Route } from 'react-router-dom';
 
-const SignIn = lazy(() => import('./views/sign-in'));
+const CustomRoute = lazy(() => import('@containers/custom-route-container'));
 const SignUp = lazy(() => import('./views/sign-up'));
+const SignIn = lazy(() => import('./views/sign-in'));
 
 export const authPaths = {
   signIn: '/sign-in',

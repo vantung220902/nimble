@@ -8,7 +8,6 @@ import { Anchor, Box, Button, Paper, Stack, Text, Title, rem } from '@mantine/co
 import { createStyles } from '@mantine/styles';
 import { useSignUp } from '@queries';
 import { ErrorService, Toastify } from '@services';
-import { scrollToTopError } from '@services/error.service';
 import { useCommonStore } from '@stores';
 import { deepKeysHookFormErrors, waiter } from '@utils';
 import { useState } from 'react';
@@ -27,8 +26,7 @@ const useStyles = createStyles((theme) => ({
       theme.colorScheme === 'dark' ? theme.colors.dark[7] : theme.colors.gray[3]
     }`,
     minHeight: '100vh',
-    maxWidth: rem(500),
-    paddingTop: rem(80),
+    maxWidth: rem(800),
     position: 'relative',
     [theme.fn.smallerThan('sm')]: {
       maxWidth: '100%',
@@ -100,7 +98,7 @@ const SignUp: React.FC = () => {
   };
 
   const onInvalidFormSubmit = (formErrors: FieldErrors<SignUpFormType>) => {
-    scrollToTopError(deepKeysHookFormErrors(formErrors));
+    ErrorService.handleScrollToTopError(deepKeysHookFormErrors(formErrors));
   };
 
   const onVerifySuccess = async () => {
@@ -116,8 +114,8 @@ const SignUp: React.FC = () => {
     <Box>
       <AppLoadingOverlay visible={isNavigating} message="Almost there..." />
       <Box className={classes.wrapper}>
-        <Paper className={classes.form} radius={0} p={30}>
-          <Title order={3} className={classes.title} ta="center" mt="md" mb={50}>
+        <Paper className={classes.form} px={rem(160)} pt={rem(200)} radius={0}>
+          <Title order={3} className={classes.title} ta="left" mt="md" mb={24}>
             Sign Up
           </Title>
 

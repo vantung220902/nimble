@@ -11,15 +11,11 @@ export const httpService = new AxiosClient({
   timeout: appConstant.CONNECTION_TIMEOUT,
 });
 
-export {
-  authResponseWrapper,
-  configApiInstance,
-  getResponseData,
-  responseWrapper,
-} from './http.helper';
+export { configApiInstance, getResponseData, responseWrapper } from './http.helper';
 
 export type {
   ApiPaginationResponseType,
   ApiResponseType,
   PaginationResponseType,
+  TableParams,
 } from './http.helper';

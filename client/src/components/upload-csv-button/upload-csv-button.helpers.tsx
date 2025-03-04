@@ -1,10 +1,10 @@
-import UploadSheetForm, { ExampleFile } from '@components/upload-csv/upload-csv';
+import UploadCsv, { ExampleFile } from '@components/upload-csv/upload-csv';
 import { modals } from '@mantine/modals';
 
 type Props = {
   title: string;
   exampleFile: ExampleFile;
-  onUpload: () => void;
+  onUpload: (files: File[]) => void;
 };
 
 export const useShowUploadSheetForm = () => {
@@ -15,7 +15,7 @@ export const useShowUploadSheetForm = () => {
       centered: true,
       size: 'xl',
       children: (
-        <UploadSheetForm
+        <UploadCsv
           onUpload={onUpload}
           exampleFile={{
             url: exampleFile.url,

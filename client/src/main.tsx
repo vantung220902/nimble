@@ -1,4 +1,3 @@
-import { BreadcrumbsProvider } from '@components/bread-crumbs/bread-crumbs-context';
 import MainAppNavigator from '@containers';
 import { LoadingContainer } from '@containers/startup';
 import { DayjsProvider, ModalProvider, QueryProvider, ThemeProvider } from '@providers';
@@ -24,17 +23,15 @@ const App = () => {
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
     <DayjsProvider>
-      <BreadcrumbsProvider>
-        <QueryProvider>
-          <ThemeProvider>
-            <BrowserRouter>
-              <ModalProvider>
-                <App />
-              </ModalProvider>
-            </BrowserRouter>
-          </ThemeProvider>
-        </QueryProvider>
-      </BreadcrumbsProvider>
+      <QueryProvider>
+        <ThemeProvider>
+          <BrowserRouter>
+            <ModalProvider>
+              <App />
+            </ModalProvider>
+          </BrowserRouter>
+        </ThemeProvider>
+      </QueryProvider>
     </DayjsProvider>
   </React.StrictMode>,
 );

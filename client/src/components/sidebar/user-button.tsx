@@ -1,7 +1,7 @@
 import { authPaths } from '@containers/auth/route';
 import { Box, Group, Stack, Text, Tooltip, UnstyledButton } from '@mantine/core';
 import { useSignOut } from '@queries';
-import { Toastify, TokenService } from '@services';
+import { TokenService } from '@services';
 import { useAuthStore } from '@stores';
 import { useQueryClient } from '@tanstack/react-query';
 import { startCase } from 'lodash';
@@ -24,14 +24,11 @@ const UserButton: FC<Props> = ({ collapsed }) => {
     onSignOut(
       {},
       {
-        onSuccess() {
+        onSettled() {
           queryClient.clear();
           TokenService.clearToken();
           onSetIsAuthenticated(false);
           navigate(authPaths.signIn);
-        },
-        onError(error) {
-          Toastify.error(error?.message);
         },
       },
     );

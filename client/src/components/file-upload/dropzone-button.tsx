@@ -115,7 +115,6 @@ export function DropzoneButton({
             size={size}
             radius="xl"
             onClick={() => {
-              console.log('openRef.current?.()');
               openRef.current?.();
             }}
             variant={isFail ? 'outline' : 'default'}

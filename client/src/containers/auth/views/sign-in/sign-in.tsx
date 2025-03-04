@@ -5,18 +5,18 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { Alert, Anchor, Button, Checkbox, Paper, rem, Stack, Text, Title } from '@mantine/core';
 import { createStyles } from '@mantine/styles';
 import { SignInPayload, useSignIn } from '@queries';
-import { TokenService } from '@services';
-import { scrollToTopError } from '@services/error.service';
+import { TokenService, ErrorService } from '@services';
 import { deepKeysHookFormErrors } from '@utils';
 import { useState } from 'react';
 import { FieldErrors, useForm } from 'react-hook-form';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { SignInFormHelper } from './sign-in.helpers';
+import { homePaths } from '@containers/home/route';
 
 const useStyles = createStyles((theme) => ({
   wrapper: {
     minHeight: '100vh',
-    backgroundSize: 'cover',
+    backgroundSize: 'contain',
     backgroundImage: `url(${IMAGES.nimble})`,
   },
 
@@ -25,9 +25,7 @@ const useStyles = createStyles((theme) => ({
       theme.colorScheme === 'dark' ? theme.colors.dark[7] : theme.colors.gray[3]
     }`,
     minHeight: '100vh',
-    maxWidth: rem(450),
-    paddingTop: rem(80),
-
+    maxWidth: rem(800),
     [theme.fn.smallerThan('sm')]: {
       maxWidth: '100%',
     },
@@ -101,7 +99,7 @@ const SignIn: React.FC = () => {
           window.location.replace(redirect);
           return;
         }
-        navigate('/');
+        navigate(homePaths.home);
       },
       onError(error) {
         setErrors(error?.message);
@@ -110,13 +108,13 @@ const SignIn: React.FC = () => {
   };
 
   const onInvalidFormSubmit = (formErrors: FieldErrors<SignInPayload>) => {
-    scrollToTopError(deepKeysHookFormErrors(formErrors));
+    ErrorService.handleScrollToTopError(deepKeysHookFormErrors(formErrors));
   };
 
   return (
     <div className={classes.wrapper}>
-      <Paper className={classes.form} radius={0} p={30}>
-        <Title order={4} c="blue" className={classes.title} ta="center" mt="md" mb={50}>
+      <Paper className={classes.form} px={rem(160)} pt={rem(200)} radius={0}>
+        <Title order={3} className={classes.title} ta="left" mt="md" mb={24}>
           Sign in
         </Title>
 

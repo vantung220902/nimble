@@ -1,7 +1,7 @@
-import CustomRoute from '@containers/custom-route-container';
 import { lazy } from 'react';
 import { Route } from 'react-router-dom';
 
+const CustomRoute = lazy(() => import('@containers/custom-route-container'));
 const HomeContainer = lazy(() => import('./views/home-container'));
 
 export const homePaths = {

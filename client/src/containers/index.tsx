@@ -1,3 +1,4 @@
+import { keywordRoutes } from '@containers/keyword/route';
 import { MainLayout } from '@layout';
 import React, { Suspense } from 'react';
 import { Route, Routes } from 'react-router-dom';
@@ -6,7 +7,7 @@ import { homeRoutes } from './home/route';
 
 const NotFound = React.lazy(() => import('./startup/not-found'));
 
-const routes = [...homeRoutes, ...authRoutes];
+const routes = [...homeRoutes, ...authRoutes, ...keywordRoutes];
 
 type ContainerProps = {};
 
