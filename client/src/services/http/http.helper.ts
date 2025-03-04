@@ -11,9 +11,7 @@ export async function responseWrapper<T>(func: ApiCall, [...args]: any[] = []): 
       const response = (await func(...args)) || {};
 
       if (response.ok || response?.status === HttpStatusCode.Ok) {
-        const data = response.data?.records
-          ? response.data?.records
-          : response.data?.data ?? response.data;
+        const data = response.data?.records ? response.data : response.data?.data ?? response.data;
 
         return res(data);
       }

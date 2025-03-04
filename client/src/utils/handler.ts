@@ -66,3 +66,7 @@ const BYTES = 1024;
 export const getFileSizeInKB = (size: number): string => `${(size / BYTES).toFixed(2)} KB`;
 
 export const removeCsvExtension = (fileName: string): string => fileName.replace(/\.csv$/, '');
+
+export const getCleanFileName = (url: string): string => {
+  return url.match(/[^/]+_(.+)$/)?.[1] || 'Unknown File';
+};
