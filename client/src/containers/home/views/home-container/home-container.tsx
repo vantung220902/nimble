@@ -1,4 +1,4 @@
-import { Card, Grid, Group, ScrollArea, Stack, Text, Title } from '@mantine/core';
+import { Card, Grid, ScrollArea, Stack, Text, Title } from '@mantine/core';
 
 const Dashboard = () => {
   return (
