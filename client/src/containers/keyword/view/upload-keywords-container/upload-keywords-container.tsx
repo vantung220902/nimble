@@ -56,7 +56,7 @@ const UploadKeywords = () => {
   });
 
   const { keywords, isFetching, setParams, onGetListKeywords } = useGetListKeywords();
-  const { data: keywordsStream } = useGetKeywordStream(connectionId);
+  const { data: keywordsStream, setData: setKeyStreams } = useGetKeywordStream(connectionId);
 
   const isLoading = isFetching || isLoadingUploadFile || isLoadingUploadKeyword;
 
@@ -74,6 +74,7 @@ const UploadKeywords = () => {
 
     setIsRefreshing(true);
     onGetListKeywords().then(({ data: { records } }) => {
+      setKeyStreams('');
       setProcessedKeywords(
         mapKeywordWithStream(records as never as ListKeywordResponse[], keywordsStream),
       );
@@ -116,7 +117,7 @@ const UploadKeywords = () => {
 
   useEffect(() => {
     if (keywords.length || keywordsStream) {
-      setProcessedKeywords((prev) => mapKeywordWithStream(prev, keywordsStream));
+      setProcessedKeywords(mapKeywordWithStream(keywords, keywordsStream));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [keywords.length, keywordsStream]);
@@ -140,7 +141,7 @@ const UploadKeywords = () => {
             variant="subtle"
             disabled={item.status !== ProcessingStatus.COMPLETED}
             className={classes.viewButton}
-            onClick={() => handleNavigateToKeywordDetail(item.keywordId)}
+            onClick={() => handleNavigateToKeywordDetail(item.id)}
           >
             View Result
           </Button>

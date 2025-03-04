@@ -27,5 +27,5 @@ export function useGetKeywordStream(id?: string) {
     };
   }, [id, queryClient]);
 
-  return { data, error };
+  return { data, error, setData };
 }

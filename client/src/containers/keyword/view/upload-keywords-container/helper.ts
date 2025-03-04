@@ -15,7 +15,7 @@ export const mapKeywordWithStream = (contents: KeywordType[], keywordsStream: st
       ...(existedKeyword.get(content.toLowerCase()) || {}),
       content,
       status,
-      keywordId: item.keywordId,
+      id: item.id,
     });
   });
 

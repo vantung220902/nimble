@@ -1,6 +1,6 @@
 export interface KeywordType {
   status: string;
-  keywordId?: string;
+  id?: string;
   content?: string;
 }
 

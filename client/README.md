@@ -1,4 +1,4 @@
-# Nimble code challenge client
+# Nimble - Web Coding Challenge
 
 ## Install:
 

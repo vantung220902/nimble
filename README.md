@@ -1,10 +1,17 @@
 # Nimble - Web Coding Challenge
+A web application to scrap data from: https://www.google.com
 
-A web application to scrap data from https://www.google.com
+# Domain 
+Web application url:  
+https://web.nimble.tunnguyenv.cloud/
+
+Api url:  
+https://api.nimble.tunnguyenv.cloud/api-svc/swagger/
+
 
 ## Architecture Overview
 
-The application follows a microservices architecture with the following components:
+The application architecture has the following components:
 
 - **Backend API** (NestJS)
 - **Frontend Client** (React)
@@ -17,27 +24,26 @@ The application follows a microservices architecture with the following componen
 
 - User authentication with JWT
 - Real-time processing status updates via Server-Sent Events (SSE)
-- Automated Google search results tracking
+- Scaping Google search data
 - File upload/download management with AWS S3
-- Scalable architecture using Redis for message queuing
-- CQRS pattern for better separation of concerns
+- Scalable architecture using Redis for caching and pub/sub model
+- CQRS pattern for easily to manage
 - Captcha handling using 2captcha API
 
 ## Tech Stack
 
 ### Backend
-- **NestJS** - Progressive Node.js framework
+- **NestJS**
 - **CQRS Pattern** - Command Query Responsibility Segregation
-- **Prisma** - Next-generation ORM
-- **PostgreSQL** - Primary database
-- **Redis** - Caching and message broker
+- **Prisma** 
+- **Redis** - Caching and pub/sub model
 - **JWT** - Authentication
 - **Puppeteer** - Web scraping
 - **AWS S3** - File storage
 - **2captcha** - Captcha resolution service
 
 ### Frontend
-- **React** - UI library
+- **React** 
 - **Mantine** - Component library
 - **Zustand** - State management
 - **SSE** - Real-time updates
@@ -46,9 +52,8 @@ The application follows a microservices architecture with the following componen
 
 ### Captcha Handling
 - Reliance on 2captcha API for resolving Google CAPTCHAs
-- Cost implications for each CAPTCHA resolution
-- Increased processing time due to CAPTCHA resolution delays
-- Rate limiting considerations
+- 2captcha take costs
+- Increased processing time due to waiting 2captcha resolve CAPTCHA add some delay times
 
 ## Getting Started
 
