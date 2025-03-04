@@ -117,7 +117,9 @@ const UploadKeywords = () => {
 
   useEffect(() => {
     if (keywords.length || keywordsStream) {
-      setProcessedKeywords(mapKeywordWithStream(keywords, keywordsStream));
+      setProcessedKeywords((pre) =>
+        mapKeywordWithStream(pre.length === 0 ? keywords : pre, keywordsStream),
+      );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [keywords.length, keywordsStream]);
