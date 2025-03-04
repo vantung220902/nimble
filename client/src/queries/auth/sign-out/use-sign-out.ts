@@ -1,4 +1,4 @@
-import { SignOutApi } from '@containers/auth/queries/sign-out';
+import { SignOutApi } from '@queries';
 import { responseWrapper } from '@services';
 import { useMutation, UseMutationOptions } from '@tanstack/react-query';
 

@@ -1,5 +1,4 @@
-import { GetMyProfileApi } from '@queries/get-my-profile/get-my-profile.api';
-import { MyProfile } from '@queries/get-my-profile/get-my-profile.type';
+import { GetMyProfileApi, MyProfile } from '@queries';
 import { getResponseData, responseWrapper } from '@services';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';

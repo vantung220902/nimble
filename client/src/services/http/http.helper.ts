@@ -1,28 +1,24 @@
 import { ApisauceInstance } from 'apisauce';
+import { HttpStatusCode } from 'axios';
 import _ from 'lodash';
 import { Toastify, TokenService } from '..';
 
 type ApiCall = (..._args: any[]) => Promise<any>;
 
 export async function responseWrapper<T>(func: ApiCall, [...args]: any[] = []): Promise<T> {
-  try {
-    const response = await func(...args);
-
-    if (response.ok) {
-      return response.data?.data ?? response.data;
-    }
-
-    throw response.data;
-  } catch (err) {
-    throw err;
-  }
-}
-
-export async function authResponseWrapper<T>(func: ApiCall, [...args]: any[] = []): Promise<T> {
   return new Promise(async (res, rej) => {
     try {
       const response = (await func(...args)) || {};
-      res(response);
+
+      if (response.ok || response?.status === HttpStatusCode.Ok) {
+        const data = response.data?.records
+          ? response.data?.records
+          : response.data?.data ?? response.data;
+
+        return res(data);
+      }
+
+      return rej(response.data);
     } catch (err) {
       rej(err);
     }
@@ -42,7 +38,7 @@ export interface ApiResponseType<T> {
 }
 
 export interface PaginationResponseType<T> {
-  data: T[];
+  records: T[];
   payloadSize?: number;
   hasNext?: boolean;
   skippedRecords?: number;
@@ -57,6 +53,13 @@ export interface ApiPaginationResponseType<T> {
   success?: boolean;
   timestamp?: string;
   query?: Object;
+}
+
+export interface TableParams {
+  skip?: number;
+  take?: number;
+  search?: string;
+  [key: string]: number | boolean | string | string[] | undefined;
 }
 
 const debouncedNetworkError = _.debounce((status: number) => {

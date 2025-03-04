@@ -36,3 +36,8 @@ export const stringify = (
 
   return result;
 };
+
+export const trimS3ObjectUrl = (url: string) => {
+  if (!url) return null;
+  return url.split('?')[0];
+};

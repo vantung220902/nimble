@@ -1,1 +1,1 @@
-export { default as UploadSheetForm } from './upload-csv';
+export { default as UploadCsv } from './upload-csv';

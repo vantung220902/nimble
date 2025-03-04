@@ -60,3 +60,9 @@ export const deepKeysHookFormErrors = (t: unknown, path: string[] = []) => {
 
   return [...new Set(filteredRes)];
 };
+
+const BYTES = 1024;
+
+export const getFileSizeInKB = (size: number): string => `${(size / BYTES).toFixed(2)} KB`;
+
+export const removeCsvExtension = (fileName: string): string => fileName.replace(/\.csv$/, '');

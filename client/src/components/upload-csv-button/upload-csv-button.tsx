@@ -7,7 +7,7 @@ import { useShowUploadSheetForm } from './upload-csv-button.helpers';
 type Props = {
   title: string;
   exampleFile: ExampleFile;
-  onUpload: () => void;
+  onUpload: (files: File[]) => void;
 };
 
 const UploadSheetButton: FC<Props> = ({ title, exampleFile, onUpload }) => {

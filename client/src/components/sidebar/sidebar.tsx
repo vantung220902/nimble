@@ -9,6 +9,8 @@ import {
 } from '@tabler/icons-react';
 import { FC, useEffect, useState } from 'react';
 import UserButton from './user-button';
+import { homePaths } from '@containers/home/route';
+import { keywordPaths } from '@containers/keyword/route';
 
 type SidebarProps = {
   setWidth: (width: number) => void;
@@ -19,8 +21,8 @@ export const Sidebar: FC<SidebarProps> = ({ setWidth }) => {
   const [activeLink, setActiveLink] = useState<string>('/');
 
   const options = [
-    { label: 'Dashboard', icon: IconDashboard, link: '/' },
-    { label: 'Upload Keywords', icon: IconFileSearch, link: '/upload' },
+    { label: 'Dashboard', icon: IconDashboard, link: homePaths.home },
+    { label: 'Upload Keywords', icon: IconFileSearch, link: keywordPaths.uploadKeywords },
     {
       label: 'Keywords',
       icon: IconFileDescription,
