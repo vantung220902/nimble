@@ -18,7 +18,7 @@ import { SignUpFormHelper, SignUpFormType } from '.';
 const useStyles = createStyles((theme) => ({
   wrapper: {
     minHeight: '100vh',
-    backgroundSize: 'cover',
+    backgroundSize: 'contain',
     backgroundImage: `url(${IMAGES.nimble})`,
   },
   form: {
