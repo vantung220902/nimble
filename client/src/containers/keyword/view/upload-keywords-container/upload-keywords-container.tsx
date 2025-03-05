@@ -76,7 +76,10 @@ const UploadKeywords = () => {
     onGetListKeywords().then(({ data: { records } }) => {
       setKeyStreams('');
       setProcessedKeywords(
-        mapKeywordWithStream(records as never as ListKeywordResponse[], keywordsStream),
+        mapKeywordWithStream(
+          processedKeywords.concat(records) as never as ListKeywordResponse[],
+          keywordsStream,
+        ),
       );
     });
 
