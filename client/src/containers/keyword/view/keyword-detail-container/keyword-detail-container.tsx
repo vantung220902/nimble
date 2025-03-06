@@ -113,7 +113,7 @@ const KeywordDetail = () => {
 
   if (isLoading) return <Loader size="xl" />;
 
-  const htmlContent = keywordDetail?.crawledContent.content;
+  const htmlContent = keywordDetail?.crawledContent?.content;
 
   return (
     <ScrollArea h="calc(100vh - 50px)">
@@ -140,87 +140,89 @@ const KeywordDetail = () => {
             </Badge>
           </Group>
 
-          <Grid gutter="md">
-            <Grid.Col span={12}>
-              <Card className={classes.statsCard} shadow="sm" p="md">
-                <Text size="lg" c="dimmed" fw={400}>
-                  Total Ads
-                </Text>
-                <Title order={3}>{keywordDetail?.crawledContent.totalGoogleAds ?? 0}</Title>
-              </Card>
-            </Grid.Col>
-
-            <Grid.Col span={12}>
-              <Card className={classes.statsCard} shadow="sm" p="md">
-                <Text size="lg" c="dimmed" fw={400}>
-                  Total Links
-                </Text>
-                <Title order={3}>{keywordDetail?.crawledContent.totalLinks ?? 0}</Title>
-              </Card>
-            </Grid.Col>
-
-            <Grid.Col span={12}>
-              <Card shadow="sm" p="lg" className={classes.htmlContent}>
-                <Group justify="apart" mb="md">
-                  <Title order={4}>HTML Content</Title>
-                  <Group>
-                    <Button
-                      leftSection={<IconCopy size={16} />}
-                      variant="outline"
-                      size="sm"
-                      color={clipboard.copied ? 'green' : 'blue'}
-                      onClick={() => clipboard.copy(htmlContent)}
-                    >
-                      {clipboard.copied ? 'Copied!' : 'Copy code'}
-                    </Button>
-                    <Button
-                      leftSection={<IconEye size={16} />}
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setPreviewOpen(true)}
-                    >
-                      Preview
-                    </Button>
-                  </Group>
-                </Group>
-                <ScrollArea h={300}>
-                  <CodeHighlight
-                    language="html"
-                    code={htmlContent}
-                    sx={{
-                      fontSize: '0.9rem',
-                      border: '1px solid #eee',
-                      lineHeight: 1.5,
-                      padding: '12px',
-                      tabSize: 2,
-                    }}
-                  />
-                </ScrollArea>
-              </Card>
-
-              <Modal
-                opened={previewOpen}
-                onClose={() => setPreviewOpen(false)}
-                title="Preview HTML code"
-                fullScreen={true}
-              >
-                <Card shadow="sm" withBorder className={classes.previewModal}>
-                  <iframe
-                    title="HTML Preview"
-                    srcDoc={htmlContent}
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      border: 'none',
-                      backgroundColor: 'white',
-                    }}
-                    sandbox="allow-same-origin allow-scripts"
-                    referrerPolicy="no-referrer"
-                  />
+          {Boolean(keywordDetail.crawledContent) && (
+            <Grid gutter="md">
+              <Grid.Col span={12}>
+                <Card className={classes.statsCard} shadow="sm" p="md">
+                  <Text size="lg" c="dimmed" fw={400}>
+                    Total Ads
+                  </Text>
+                  <Title order={3}>{keywordDetail.crawledContent.totalGoogleAds ?? 0}</Title>
                 </Card>
-              </Modal>
-            </Grid.Col>
-          </Grid>
+              </Grid.Col>
+
+              <Grid.Col span={12}>
+                <Card className={classes.statsCard} shadow="sm" p="md">
+                  <Text size="lg" c="dimmed" fw={400}>
+                    Total Links
+                  </Text>
+                  <Title order={3}>{keywordDetail?.crawledContent.totalLinks ?? 0}</Title>
+                </Card>
+              </Grid.Col>
+
+              <Grid.Col span={12}>
+                <Card shadow="sm" p="lg" className={classes.htmlContent}>
+                  <Group justify="apart" mb="md">
+                    <Title order={4}>HTML Content</Title>
+                    <Group>
+                      <Button
+                        leftSection={<IconCopy size={16} />}
+                        variant="outline"
+                        size="sm"
+                        color={clipboard.copied ? 'green' : 'blue'}
+                        onClick={() => clipboard.copy(htmlContent)}
+                      >
+                        {clipboard.copied ? 'Copied!' : 'Copy code'}
+                      </Button>
+                      <Button
+                        leftSection={<IconEye size={16} />}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setPreviewOpen(true)}
+                      >
+                        Preview
+                      </Button>
+                    </Group>
+                  </Group>
+                  <ScrollArea h={300}>
+                    <CodeHighlight
+                      language="html"
+                      code={htmlContent}
+                      sx={{
+                        fontSize: '0.9rem',
+                        border: '1px solid #eee',
+                        lineHeight: 1.5,
+                        padding: '12px',
+                        tabSize: 2,
+                      }}
+                    />
+                  </ScrollArea>
+                </Card>
+
+                <Modal
+                  opened={previewOpen}
+                  onClose={() => setPreviewOpen(false)}
+                  title="Preview HTML code"
+                  fullScreen={true}
+                >
+                  <Card shadow="sm" withBorder className={classes.previewModal}>
+                    <iframe
+                      title="HTML Preview"
+                      srcDoc={htmlContent}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        border: 'none',
+                        backgroundColor: 'white',
+                      }}
+                      sandbox="allow-same-origin allow-scripts"
+                      referrerPolicy="no-referrer"
+                    />
+                  </Card>
+                </Modal>
+              </Grid.Col>
+            </Grid>
+          )}
         </Paper>
       </Container>
     </ScrollArea>
