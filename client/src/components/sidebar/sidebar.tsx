@@ -1,5 +1,8 @@
 import { SidebarItem } from '@components/sidebar/links-group';
-import { AppShell, Box, Button, ScrollArea } from '@mantine/core';
+import { IMAGES } from '@config/images';
+import { homePaths } from '@containers/home/route';
+import { keywordPaths } from '@containers/keyword/route';
+import { AppShell, Box, Button, Flex, Image, ScrollArea, Title } from '@mantine/core';
 import {
   IconChevronLeft,
   IconChevronRight,
@@ -10,8 +13,6 @@ import {
 } from '@tabler/icons-react';
 import { FC, useEffect, useState } from 'react';
 import UserButton from './user-button';
-import { homePaths } from '@containers/home/route';
-import { keywordPaths } from '@containers/keyword/route';
 
 type SidebarProps = {
   setWidth: (width: number) => void;
@@ -68,6 +69,26 @@ export const Sidebar: FC<SidebarProps> = ({ setWidth }) => {
           border: '1px solid #E2E8F0',
         })}
       >
+        <AppShell.Section mt="md">
+          <Flex
+            align="center"
+            gap={8}
+            sx={(theme) => ({
+              paddingLeft: collapsed ? theme.spacing.xs : theme.spacing.md,
+            })}
+          >
+            <Image
+              src={IMAGES.nimble}
+              alt="Logo"
+              sx={{
+                objectFit: 'contain',
+                height: '40px',
+              }}
+            />
+            {!collapsed && <Title order={3}>Nimble</Title>}
+          </Flex>
+        </AppShell.Section>
+
         <AppShell.Section grow component={ScrollArea}>
           <Box mt="md">{links}</Box>
         </AppShell.Section>
