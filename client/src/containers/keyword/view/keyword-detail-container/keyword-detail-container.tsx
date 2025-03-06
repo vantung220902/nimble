@@ -1,22 +1,25 @@
 import { ProcessingStatus } from '@containers/keyword/view/upload-keywords-container/types';
+import { CodeHighlight } from '@mantine/code-highlight';
 import {
   Badge,
+  Button,
   Card,
-  Code,
   Container,
   Grid,
   Group,
   Loader,
+  Modal,
   Paper,
   ScrollArea,
   Text,
   Title,
 } from '@mantine/core';
+import { useClipboard } from '@mantine/hooks';
 import { createStyles } from '@mantine/styles';
 import { useGetKeywordDetail } from '@queries';
-import { IconCalendar } from '@tabler/icons-react';
+import { IconCalendar, IconCopy, IconEye } from '@tabler/icons-react';
 import { getDateDisplay } from '@utils';
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { useParams } from 'react-router-dom';
 
 const useStyles = createStyles((theme) => ({
@@ -74,6 +77,11 @@ const useStyles = createStyles((theme) => ({
     color: theme.colors.blue[6],
     fontWeight: 600,
   },
+  previewModal: {
+    height: '90vh',
+    overflow: 'auto',
+    padding: '0px',
+  },
 }));
 
 const STATUS_CLASS_MAP = {
@@ -85,6 +93,9 @@ const STATUS_CLASS_MAP = {
 const KeywordDetail = () => {
   const { classes } = useStyles();
   const { id } = useParams<{ id: string }>();
+
+  const [previewOpen, setPreviewOpen] = useState<boolean>(false);
+  const clipboard = useClipboard();
 
   const { keywordDetail, isLoading } = useGetKeywordDetail({
     params: {
@@ -101,6 +112,8 @@ const KeywordDetail = () => {
   );
 
   if (isLoading) return <Loader size="xl" />;
+
+  const htmlContent = keywordDetail?.crawledContent.content;
 
   return (
     <ScrollArea h="calc(100vh - 50px)">
@@ -150,19 +163,62 @@ const KeywordDetail = () => {
               <Card shadow="sm" p="lg" className={classes.htmlContent}>
                 <Group justify="apart" mb="md">
                   <Title order={4}>HTML Content</Title>
+                  <Group>
+                    <Button
+                      leftSection={<IconCopy size={16} />}
+                      variant="outline"
+                      size="sm"
+                      color={clipboard.copied ? 'green' : 'blue'}
+                      onClick={() => clipboard.copy(htmlContent)}
+                    >
+                      {clipboard.copied ? 'Copied!' : 'Copy code'}
+                    </Button>
+                    <Button
+                      leftSection={<IconEye size={16} />}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPreviewOpen(true)}
+                    >
+                      Preview
+                    </Button>
+                  </Group>
                 </Group>
                 <ScrollArea h={300}>
-                  <Code
-                    block
+                  <CodeHighlight
+                    language="html"
+                    code={htmlContent}
                     sx={{
                       fontSize: '0.9rem',
                       border: '1px solid #eee',
+                      lineHeight: 1.5,
+                      padding: '12px',
+                      tabSize: 2,
                     }}
-                  >
-                    {keywordDetail?.crawledContent.content}
-                  </Code>
+                  />
                 </ScrollArea>
               </Card>
+
+              <Modal
+                opened={previewOpen}
+                onClose={() => setPreviewOpen(false)}
+                title="Preview HTML code"
+                fullScreen={true}
+              >
+                <Card shadow="sm" withBorder className={classes.previewModal}>
+                  <iframe
+                    title="HTML Preview"
+                    srcDoc={htmlContent}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      border: 'none',
+                      backgroundColor: 'white',
+                    }}
+                    sandbox="allow-same-origin allow-scripts"
+                    referrerPolicy="no-referrer"
+                  />
+                </Card>
+              </Modal>
             </Grid.Col>
           </Grid>
         </Paper>

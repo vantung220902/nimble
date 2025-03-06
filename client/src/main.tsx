@@ -5,8 +5,8 @@ import React, { Suspense } from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import * as workbox from './workbox';
-
 import '@mantine/carousel/styles.css';
+import '@mantine/code-highlight/styles.css';
 import { DatesProvider } from '@mantine/dates';
 import './styles/root.styles.scss';
 
