@@ -18,7 +18,7 @@ terraform {
 dependency "acm" {
   config_path = find_in_parent_folders("acm")
   mock_outputs = {
-    acm_certificate_arn = "arn:aws:acm:us-west-2:111111111111:certificate/random-id"
+    acm_certificate_arn = "arn:aws:acm:us-east-1:111111111111:certificate/random-id"
   }
   mock_outputs_allowed_terraform_commands = ["validate", "init", "plan"]
 }

@@ -9,9 +9,9 @@
         "kms:Decrypt"
       ],
       "Resource": [
-        "arn:aws:ssm:us-west-2:${aws_account_id}:parameter/*",
-        "arn:aws:secretsmanager:us-west-2:${aws_account_id}:secret:*",
-        "arn:aws:kms:us-west-2:${aws_account_id}:key/*"
+        "arn:aws:ssm:${aws_region}:${aws_account_id}:parameter/*",
+        "arn:aws:secretsmanager:${aws_region}:${aws_account_id}:secret:*",
+        "arn:aws:kms:${aws_region}:${aws_account_id}:key/*"
       ]
     },
     {

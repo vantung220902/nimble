@@ -42,7 +42,7 @@ dependency "ecs_cluster" {
 dependency "alb" {
   config_path = find_in_parent_folders("alb")
   mock_outputs = {
-    https_listener_arn = "arn:aws:elasticloadbalancing:us-west-2:111111111111:listener/app/api-elb/92c970793514ef35/f514456ec9131776"
+    https_listener_arn = "arn:aws:elasticloadbalancing:us-east-1:111111111111:listener/app/api-elb/92c970793514ef35/f514456ec9131776"
   }
   mock_outputs_allowed_terraform_commands = ["validate", "plan", "init"]
 }

@@ -13,6 +13,11 @@ variable "environment" {
   type = string
 }
 
+variable "region" {
+  type = string
+  description = "Region"
+}
+
 variable "role_suffix" {
   description = "Role suffix"
   type = string
