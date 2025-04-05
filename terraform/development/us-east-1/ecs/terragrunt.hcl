@@ -5,7 +5,7 @@ locals {
 
   environment    = local.environment_vars.locals.environment
   aws_account_id = local.account_vars.locals.aws_account_id
-  region         = local.region_vars.locals.aws_region
+  aws_region     = local.region_vars.locals.aws_region
   project_name   = local.environment_vars.locals.project_name
 }
 
@@ -20,6 +20,7 @@ include {
 inputs = {
   environment    = local.environment
   aws_account_id = local.aws_account_id
+  aws_region     = local.aws_region
   role_suffix    = local.project_name
   cluster_name   = "ecs-${local.project_name}-${local.environment}"
 }

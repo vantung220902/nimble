@@ -2,7 +2,7 @@ data "template_file" "ecs_task_execution_iam_role_policy_file" {
   template = file("${path.module}/policy/ecs-task-policy.json")
   vars = {
     aws_account_id = var.aws_account_id
-    aws_region     = var.region
+    aws_region     = var.aws_region
   }
 }
 

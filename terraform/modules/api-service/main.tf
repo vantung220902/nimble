@@ -121,7 +121,7 @@ resource "aws_lb_listener_rule" "service_rule" {
   }
   condition {
     path_pattern {
-      values = ["/${var.api_prefix}", "/${var.api_prefix}/", "${var.api_prefix}/*"]
+      values = ["/${var.api_prefix}", "/${var.api_prefix}/", "/${var.api_prefix}/*"]
     }
   }
 }
@@ -219,105 +219,6 @@ resource "aws_codedeploy_deployment_group" "deployment_group" {
     }
   }
 }
-
-# resource "aws_s3_bucket" "codepipeline_artifact" {
-#   bucket = "${var.project_name}-${var.repo_name}-${var.environment}-pipeline-artifact"
-# }
-
-# resource "aws_s3_bucket" "artifact_bucket" {
-#   bucket = "${var.project_name}-${var.repo_name}-${var.environment}-ecs-artifact"
-# }
-
-# data "aws_iam_policy_document" "bucket_policy" {
-#   statement {
-#     sid    = "AllowGetPutDeleteObjects"
-#     effect = "Allow"
-#     principals {
-#       type        = "AWS"
-#       identifiers = ["arn:aws:iam::${var.aws_account_id}:role/codebuild-role", "arn:aws:iam::${var.aws_account_id}:user/terraform_admin"]
-#     }
-#     actions = [
-#       "s3:PutObjectAcl",
-#       "s3:PutObject",
-#       "s3:GetObjectAcl",
-#       "s3:GetObject",
-#       "s3:DeleteObject",
-#       "s3:AbortMultipartUpload",
-#     ]
-#     resources = ["${aws_s3_bucket.artifact_bucket.arn}/*"]
-#   }
-#   statement {
-#     sid    = "AllowListBucket"
-#     effect = "Allow"
-#     principals {
-#       type        = "AWS"
-#       identifiers = ["arn:aws:iam::${var.aws_account_id}:role/codebuild-role", "arn:aws:iam::${var.aws_account_id}:user/terraform_admin"]
-#     }
-#     actions   = ["s3:ListBucket"]
-#     resources = [aws_s3_bucket.artifact_bucket.arn]
-#   }
-# }
-
-# resource "aws_s3_bucket_policy" "artifact_bucket_policy" {
-#   bucket = aws_s3_bucket.artifact_bucket.id
-#   policy = data.aws_iam_policy_document.bucket_policy.json
-# }
-
-# resource "aws_s3_bucket_versioning" "versioning_artifact_bucket" {
-#   bucket = aws_s3_bucket.artifact_bucket.id
-#   versioning_configuration {
-#     status = "Enabled"
-#   }
-# }
-
-# resource "aws_codepipeline" "codepipeline" {
-#   name     = "${var.project_name}-${var.repo_name}-${var.environment}-pipeline"
-#   role_arn = var.codepipeline_role_arn
-
-#   artifact_store {
-#     location = aws_s3_bucket.codepipeline_artifact.bucket
-#     type     = "S3"
-#   }
-#   stage {
-#     name = "Source"
-#     action {
-#       name     = "S3Source"
-#       category = "Source"
-#       owner    = "AWS"
-#       configuration = {
-#         PollForSourceChanges = "false"
-#         S3Bucket             = aws_s3_bucket.artifact_bucket.id
-#         S3ObjectKey          = "appspec.zip"
-#       }
-#       provider         = "S3"
-#       version          = "1"
-#       output_artifacts = ["appspecartifact"]
-#       run_order        = 1
-#     }
-#   }
-#   stage {
-#     name = "Deploy"
-#     action {
-#       name     = "Deploy"
-#       category = "Deploy"
-#       owner    = "AWS"
-#       configuration = {
-#         AppSpecTemplateArtifact        = "appspecartifact"
-#         AppSpecTemplatePath            = "appspec.yml"
-#         ApplicationName                = "${var.project_name}-${var.repo_name}-application"
-#         DeploymentGroupName            = "${var.project_name}-${var.repo_name}-deploy-group"
-#         Image1ArtifactName             = "appspecartifact"
-#         Image1ContainerName            = "IMAGE1_NAME"
-#         TaskDefinitionTemplateArtifact = "appspecartifact"
-#         TaskDefinitionTemplatePath     = "taskdef.json"
-#       }
-#       input_artifacts = ["appspecartifact"]
-#       provider        = "CodeDeployToECS"
-#       version         = "1"
-#       run_order       = 1
-#     }
-#   }
-# }
 
 resource "aws_appautoscaling_target" "scale_target" {
   service_namespace  = "ecs"
