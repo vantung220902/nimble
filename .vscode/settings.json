@@ -36,13 +36,17 @@
   "cSpell.words": [
     "auths",
     "cqrs",
+    "hostnames",
     "ixdate",
     "ixfk",
     "ixid",
     "ixtext",
     "ixuq",
+    "jumpbox",
     "nestjs",
     "Nimble",
+    "superadmin",
+    "terragrunt",
     "Timestamptz",
     "Toastify"
   ]
