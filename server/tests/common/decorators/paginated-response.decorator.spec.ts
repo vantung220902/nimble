@@ -13,28 +13,29 @@ import {
 } from '@nestjs/swagger';
 
 jest.mock('@nestjs/common', () => {
-  const originalModule = jest.requireActual('@nestjs/common');
+  const original = jest.requireActual('@nestjs/common');
   return {
-    ...originalModule,
+    ...original,
     applyDecorators: jest.fn(),
   };
 });
 
 jest.mock('@nestjs/swagger', () => {
-  const originalModule = jest.requireActual('@nestjs/swagger');
+  const original = jest.requireActual('@nestjs/swagger');
+
   return {
-    ...originalModule,
-    ApiQuery: jest.fn(),
+    ...original,
     ApiExtraModels: jest.fn(),
-    ApiOkResponse: jest.fn(),
-    ApiUnauthorizedResponse: jest.fn(),
     ApiForbiddenResponse: jest.fn(),
-    ApiNotFoundResponse: jest.fn(),
     ApiInternalServerErrorResponse: jest.fn(),
+    ApiNotFoundResponse: jest.fn(),
+    ApiOkResponse: jest.fn(),
+    ApiQuery: jest.fn(),
+    ApiUnauthorizedResponse: jest.fn(),
   };
 });
 
-class DummyModel {
+class TestModule {
   message: string;
 
   constructor(message: string) {
@@ -42,31 +43,33 @@ class DummyModel {
   }
 }
 
-describe('PaginatedApiResponseDecorator', () => {
-  afterEach(() => jest.clearAllMocks());
+describe('PaginatedApiResponse', () => {
+  afterAll(() => jest.clearAllMocks());
+  it('Should apply PaginatedApiResponse decorator', () => {
+    PaginatedApiResponse(TestModule);
 
-  test('should apply swagger decorators', () => {
-    PaginatedApiResponse(DummyModel);
-
-    expect(ApiQuery).toBeCalledTimes(2);
-    expect(ApiQuery).toBeCalledWith({
+    expect(ApiQuery).toHaveBeenCalledTimes(2);
+    expect(ApiQuery).toHaveBeenCalledWith({
       name: 'skip',
       type: 'number',
       required: false,
       example: '0',
     });
-    expect(ApiQuery).toBeCalledWith({
+    expect(ApiQuery).toHaveBeenCalledWith({
       name: 'take',
       type: 'number',
       required: false,
       example: '10',
     });
 
-    expect(ApiExtraModels).toBeCalledTimes(1);
-    expect(ApiExtraModels).toBeCalledWith(PaginatedApiResponseDto, DummyModel);
+    expect(ApiExtraModels).toHaveBeenCalledTimes(1);
+    expect(ApiExtraModels).toHaveBeenCalledWith(
+      PaginatedApiResponseDto,
+      TestModule,
+    );
 
-    expect(ApiOkResponse).toBeCalledTimes(1);
-    expect(ApiOkResponse).toBeCalledWith({
+    expect(ApiOkResponse).toHaveBeenCalledTimes(1);
+    expect(ApiOkResponse).toHaveBeenCalledWith({
       schema: {
         allOf: [
           { $ref: getSchemaPath(PaginatedApiResponseDto) },
@@ -80,7 +83,7 @@ describe('PaginatedApiResponseDecorator', () => {
               },
               records: {
                 type: 'array',
-                items: { $ref: getSchemaPath(DummyModel) },
+                items: { $ref: getSchemaPath(TestModule) },
               },
               payloadSize: {
                 type: 'number',
@@ -94,8 +97,8 @@ describe('PaginatedApiResponseDecorator', () => {
       },
     });
 
-    expect(ApiUnauthorizedResponse).toBeCalledTimes(1);
-    expect(ApiUnauthorizedResponse).toBeCalledWith({
+    expect(ApiUnauthorizedResponse).toHaveBeenCalledTimes(1);
+    expect(ApiUnauthorizedResponse).toHaveBeenCalledWith({
       description: 'Not authenticated',
       schema: {
         properties: {
@@ -133,8 +136,8 @@ describe('PaginatedApiResponseDecorator', () => {
       },
     });
 
-    expect(ApiForbiddenResponse).toBeCalledTimes(1);
-    expect(ApiForbiddenResponse).toBeCalledWith({
+    expect(ApiForbiddenResponse).toHaveBeenCalledTimes(1);
+    expect(ApiForbiddenResponse).toHaveBeenCalledWith({
       description: 'Access denied',
       schema: {
         properties: {
@@ -176,11 +179,13 @@ describe('PaginatedApiResponseDecorator', () => {
       },
     });
 
-    expect(ApiNotFoundResponse).toBeCalledTimes(1);
-    expect(ApiNotFoundResponse).toBeCalledWith({ description: 'Not found' });
+    expect(ApiNotFoundResponse).toHaveBeenCalledTimes(1);
+    expect(ApiNotFoundResponse).toHaveBeenCalledWith({
+      description: 'Not found',
+    });
 
-    expect(ApiInternalServerErrorResponse).toBeCalledTimes(1);
-    expect(ApiInternalServerErrorResponse).toBeCalledWith({
+    expect(ApiInternalServerErrorResponse).toHaveBeenCalledTimes(1);
+    expect(ApiInternalServerErrorResponse).toHaveBeenCalledWith({
       description: 'Server error',
       schema: {
         properties: {

@@ -1,109 +1,128 @@
-import { JwtStrategy } from '@common/strategies/jwt.strategy';
+import { JwtStrategy } from '@common/strategies';
 import { AppConfig } from '@config';
 import { PrismaService } from '@database';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { UnauthorizedException } from '@nestjs/common';
-import { Cache } from 'cache-manager';
+import { Test, TestingModule } from '@nestjs/testing';
 import { Request } from 'express';
 
 describe('JwtStrategy', () => {
-  let strategy: JwtStrategy;
-  let prismaService: jest.MockedObject<PrismaService>;
-  let cacheService: jest.MockedObject<Cache>;
-  let appConfig: jest.MockedObject<AppConfig>;
+  let jwtStrategy: JwtStrategy;
+  let moduleRef: TestingModule;
 
-  beforeEach(() => {
-    prismaService = {
-      user: {
-        findUnique: jest.fn(),
-      },
-    } as any as jest.MockedObject<PrismaService>;
+  const mockAppConfig = {
+    jwtSecret: 'test-secret',
+  };
+  const mockDbContext = {
+    user: {
+      findUnique: jest.fn(),
+    },
+  };
+  const mockCacheService = {
+    get: jest.fn(),
+  };
 
-    cacheService = {
-      get: jest.fn(),
-    } as jest.MockedObject<Cache>;
+  beforeEach(async () => {
+    jest.clearAllMocks();
 
-    appConfig = {
-      jwtSecret: 'test-secret',
-    } as jest.MockedObject<AppConfig>;
+    moduleRef = await Test.createTestingModule({
+      providers: [
+        JwtStrategy,
+        { provide: PrismaService, useValue: mockDbContext },
+        { provide: AppConfig, useValue: mockAppConfig },
+        { provide: CACHE_MANAGER, useValue: mockCacheService },
+      ],
+    }).compile();
 
-    strategy = new JwtStrategy(prismaService, appConfig, cacheService);
+    jwtStrategy = moduleRef.get<JwtStrategy>(JwtStrategy);
   });
 
-  it('should be defined', () => {
-    expect(strategy).toBeDefined();
+  afterEach(async () => {
+    await moduleRef.close();
   });
 
-  it('should validate and return user data when token is valid', async () => {
+  it('Should be defined', () => {
+    expect(jwtStrategy).toBeDefined();
+  });
+
+  it('Should validate user token is valid', async () => {
     const mockRequest = {
       headers: { authorization: 'Bearer test-token' },
     } as Request;
 
     const mockPayload = {
       sub: '1',
-      email: 'test@example.com',
+      email: 'test@gmail.com',
     };
-
     const mockUser = {
-      email: 'test@example.com',
-      status: 'ACTIVE',
+      email: 'test@gmail.com',
+      status: 'Active',
     };
 
-    cacheService.get.mockResolvedValue(null);
-    (prismaService.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
+    mockCacheService.get.mockResolvedValueOnce(null);
+    mockDbContext.user.findUnique.mockResolvedValueOnce(mockUser);
 
-    const strategyResponse = await strategy.validate(mockRequest, mockPayload);
-
-    expect(strategyResponse).toEqual({
+    const response = await jwtStrategy.validate(mockRequest, mockPayload);
+    expect(response).toEqual({
       ...mockPayload,
       email: mockUser.email,
       status: mockUser.status,
     });
-    expect(cacheService.get).toHaveBeenCalledWith('blacklist:test-token');
-    expect(prismaService.user.findUnique).toHaveBeenCalledWith({
-      where: { id: mockPayload.sub },
-      select: { email: true, status: true },
+    expect(mockCacheService.get).toHaveBeenCalledWith('blacklist:test-token');
+    expect(mockDbContext.user.findUnique).toHaveBeenLastCalledWith({
+      where: {
+        id: mockPayload.sub,
+      },
+      select: {
+        email: true,
+        status: true,
+      },
     });
   });
 
-  it('should throw UnauthorizedException when token is in blacklist', async () => {
+  it('Should throw UnauthorizedException when token is in blacklist', async () => {
     const mockRequest = {
       headers: { authorization: 'Bearer test-token' },
     } as Request;
-
     const mockPayload = {
       sub: '1',
-      email: 'test@example.com',
+      email: 'test@gmail.com',
     };
 
-    cacheService.get.mockResolvedValue('true');
+    mockCacheService.get.mockResolvedValueOnce('true');
+    mockDbContext.user.findUnique.mockResolvedValueOnce(null);
 
-    await expect(strategy.validate(mockRequest, mockPayload)).rejects.toThrow(
-      new UnauthorizedException('Token is banned!'),
-    );
-    expect(cacheService.get).toHaveBeenCalledWith('blacklist:test-token');
-    expect(prismaService.user.findUnique).not.toHaveBeenCalled();
+    await expect(
+      jwtStrategy.validate(mockRequest, mockPayload),
+    ).rejects.toThrow(new UnauthorizedException('Token is banned!'));
+    expect(mockCacheService.get).toHaveBeenCalledWith('blacklist:test-token');
+    expect(mockDbContext.user.findUnique).not.toHaveBeenCalled();
   });
 
-  it('should throw UnauthorizedException when user not found', async () => {
+  it('Should throw UnauthorizedException when user not found', async () => {
     const mockRequest = {
       headers: { authorization: 'Bearer test-token' },
     } as Request;
-
     const mockPayload = {
       sub: '1',
-      email: 'test@example.com',
+      email: 'test@gmail.com',
     };
 
-    cacheService.get.mockResolvedValue(null);
-    (prismaService.user.findUnique as jest.Mock).mockResolvedValue(null);
+    mockCacheService.get.mockResolvedValueOnce(null);
+    mockDbContext.user.findUnique.mockResolvedValueOnce(null);
 
-    await expect(strategy.validate(mockRequest, mockPayload)).rejects.toThrow(
-      new UnauthorizedException('Token is invalid!'),
-    );
-    expect(cacheService.get).toHaveBeenCalledWith('blacklist:test-token');
-    expect(prismaService.user.findUnique).toHaveBeenCalledWith({
-      where: { id: mockPayload.sub },
-      select: { email: true, status: true },
+    await expect(
+      jwtStrategy.validate(mockRequest, mockPayload),
+    ).rejects.toThrow(new UnauthorizedException('Token is invalid!'));
+    expect(mockCacheService.get).toHaveBeenCalledWith('blacklist:test-token');
+    expect(mockDbContext.user.findUnique).toHaveBeenCalledWith({
+      where: {
+        id: mockPayload.sub,
+      },
+      select: {
+        email: true,
+        status: true,
+      },
     });
   });
 });

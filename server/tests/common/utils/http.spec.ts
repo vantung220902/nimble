@@ -1,34 +1,40 @@
-import { getTokenFromHeader, waiter } from '@common/utils/http';
-import { Request } from 'express';
+import { getTokenFromHeader, waiter } from '@common/utils';
 
-describe('HTTPUtils', () => {
+describe('HTTP', () => {
   describe('getTokenFromHeader', () => {
-    test('should return token if authorization header is valid', () => {
-      const headers: Request['headers'] = {
-        authorization: 'Bearer token',
+    it('Should return token if authorization header is valid', () => {
+      const headers = {
+        authorization: 'Bearer test-token',
       };
-      expect(getTokenFromHeader(headers)).toEqual('token');
+      const authorToken = getTokenFromHeader(headers);
+
+      expect(authorToken).toEqual('test-token');
     });
 
-    test('should return undefined if authorization header is missing', () => {
-      const headers: Request['headers'] = {};
-      expect(getTokenFromHeader(headers)).toBeUndefined();
+    it('Should return undefined if missing authorization header', () => {
+      const headers = {};
+      const authorToken = getTokenFromHeader(headers);
+
+      expect(authorToken).toBeUndefined();
     });
 
-    test('should return undefined if authorization type is not Bearer', () => {
-      const headers: Request['headers'] = {
-        authorization: 'Basic token',
+    it('Should return undefined if token is invalid', () => {
+      const headers = {
+        authorization: 'Invalid test-token',
       };
-      expect(getTokenFromHeader(headers)).toBeUndefined();
+      const authorToken = getTokenFromHeader(headers);
+
+      expect(authorToken).toBeUndefined();
     });
   });
 
   describe('waiter', () => {
-    test('should resolve after the specified timeout', async () => {
+    it('Should resolve after specified timeout', async () => {
       const timeout = 1000;
       const start = Date.now();
       await waiter(timeout);
       const end = Date.now();
+
       expect(end - start).toBeGreaterThanOrEqual(timeout);
     });
   });

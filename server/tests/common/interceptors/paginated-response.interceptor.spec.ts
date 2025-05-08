@@ -6,64 +6,64 @@ import { instance, mock, when } from 'ts-mockito';
 expect.extend({
   toEqualAnyOf(received: any, argument: any[]) {
     const found = argument.some((eqItem) => {
-      if (typeof eqItem === 'undefined' && typeof received === 'undefined') {
+      if (typeof eqItem === 'undefined' && typeof received === 'undefined')
         return true;
-      }
-      if (eqItem === null && received === null) {
-        return true;
-      }
+
+      if (eqItem === null && received === null) return false;
+
       try {
         expect(received).toEqual(eqItem);
         return true;
-      } catch (e) {
+      } catch (error) {
         return false;
       }
     });
+
     return found
       ? {
-          message: () => 'Ok',
+          message: () => 'OK',
           pass: true,
         }
       : {
-          message: () => `expected ${received} to be any of ${argument}`,
+          message: () => `expected ${received} to be any of of ${argument}`,
           pass: false,
         };
   },
 });
 
 describe('PaginatedResponseInterceptor', () => {
-  test.each([
-    [{ text: 'Nimble' }],
-    ['string'],
-    [123],
-    [['item 1', 'item 2']],
-    [undefined],
-    [null],
-    [new Error('Somethings wrong')],
-    [
-      {
-        skippedRecords: 100,
-        totalRecords: 1000,
-        records: [],
-        payloadSize: 100,
-        hasNext: true,
-      },
-    ],
-  ] as any[])(
+  const mockExecution = mock<ExecutionContext>();
+  const mockHandler = mock<CallHandler>();
+
+  const testCases = test.each([
+    { text: 'data' },
+    'string data',
+    123,
+    ['array item 1', 'array item 2'],
+    undefined,
+    null,
+    new Error('Something wrong!'),
+    {
+      skippedRecords: 100,
+      totalRecords: 1000,
+      records: Array(10).fill('foo'),
+      payloadSize: 100,
+      hasNext: true,
+    },
+  ]);
+
+  testCases(
     'should transform %p to { skippedRecords, totalRecords, records, payloadSize, hasNext }',
-    (record, done: any) => {
-      const observable = from([record]);
+    (data: any, done: jest.DoneCallback) => {
+      const observable = from([data]);
+      when(mockHandler.handle()).thenReturn(observable);
 
-      const mockExecution = mock<ExecutionContext>();
-      const mockCallHandler = mock<CallHandler>();
-      when(mockCallHandler.handle()).thenReturn(observable);
-
-      const paginatedResponse = new PaginatedResponseInterceptor().intercept(
+      const result = new PaginatedResponseInterceptor().intercept(
         instance(mockExecution),
-        instance(mockCallHandler),
+        instance(mockHandler),
       );
 
-      paginatedResponse.subscribe((value) => {
+      result.subscribe((value) => {
         expect(value).toEqual(
           expect.objectContaining({
             skippedRecords: expect.toEqualAnyOf([
@@ -72,16 +72,16 @@ describe('PaginatedResponseInterceptor', () => {
             ]),
             totalRecords: expect.toEqualAnyOf([expect.any(Number), undefined]),
             records: expect.toEqualAnyOf([
-              expect.arrayContaining([]),
+              expect.arrayContaining(Array(10).fill('foo')),
               undefined,
             ]),
             payloadSize: expect.toEqualAnyOf([expect.any(Number), undefined]),
             hasNext: expect.toEqualAnyOf([expect.any(Boolean), undefined]),
           }),
         );
-
-        done();
       });
+
+      done();
     },
   );
 });

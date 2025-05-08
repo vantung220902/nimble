@@ -1,41 +1,40 @@
 import { Pagination } from '@common/factories';
 
-describe('PaginationFactory', () => {
-  test('should create pagination request', () => {
-    const dto = Pagination.of(
+describe('Pagination', () => {
+  it('Should create pagination request', () => {
+    const paginationDto = Pagination.of(
       {
-        skip: 250,
-        take: 100,
+        take: 10,
+        skip: 10,
       },
-      1000,
-      Array(100).fill('Nimble'),
+      50,
+      Array(10).fill('foo'),
     );
 
-    expect(dto).toEqual({
-      skippedRecords: 250,
-      totalRecords: 1000,
-      payloadSize: 100,
+    expect(paginationDto).toBeDefined();
+    expect(paginationDto).toEqual({
+      skippedRecords: 10,
+      totalRecords: 50,
+      records: Array(10).fill('foo'),
+      payloadSize: 10,
       hasNext: true,
-      records: Array(100).fill('Nimble'),
     });
   });
 
-  test('should create pagination request, last page', () => {
-    const dto = Pagination.of(
-      {
-        skip: 950,
-        take: 100,
-      },
-      1000,
-      Array(50).fill('Nimble'),
+  it('Should create pagination request, last page', () => {
+    const paginationDto = Pagination.of(
+      { take: 10, skip: 40 },
+      50,
+      Array(10).fill('foo'),
     );
 
-    expect(dto).toEqual({
-      skippedRecords: 950,
-      totalRecords: 1000,
-      payloadSize: 50,
+    expect(paginationDto).toBeDefined();
+    expect(paginationDto).toEqual({
+      skippedRecords: 40,
+      totalRecords: 50,
+      records: Array(10).fill('foo'),
+      payloadSize: 10,
       hasNext: false,
-      records: Array(50).fill('Nimble'),
     });
   });
 });

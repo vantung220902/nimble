@@ -1,21 +1,36 @@
-import { trim } from '@common/utils/transformer';
+import { trim } from '@common/utils';
 
-describe('TransformerUtils', () => {
+describe('Transformer', () => {
   describe('trim', () => {
-    test('should trim whitespace from string value', () => {
-      expect(trim({ value: ' Nimble ' })).toBe('Nimble');
+    it('Should trim whitespace from string value', () => {
+      const trimmed = trim({ value: '  Nimble   ' });
+
+      expect(trimmed).toEqual('Nimble');
     });
 
-    test('should return undefined for null value', () => {
-      expect(trim({ value: null })).toBeNull();
+    it('Should return null when value is nullable', () => {
+      const trimmed = trim({ value: null });
+
+      expect(trimmed).toBeNull();
     });
 
-    test('should handle string with no whitespace', () => {
-      expect(trim({ value: 'Nimble' })).toBe('Nimble');
+    it('Should return undefined when value is undefined', () => {
+      const trimmed = trim({ value: undefined });
+
+      expect(trimmed).toBeUndefined();
     });
 
-    test('should handle string with only whitespace', () => {
-      expect(trim({ value: '  ' })).toBe('');
+    it('Should return same value if not have whitespace', () => {
+      const value = 'Nimble';
+      const trimmed = trim({ value: value });
+
+      expect(trimmed).toEqual(value);
+    });
+
+    it('Should handle all whitespace characters', () => {
+      const trimmed = trim({ value: '         ' });
+
+      expect(trimmed).toEqual('');
     });
   });
 });

@@ -1,192 +1,299 @@
 import { AppConfig } from '@config';
 import { PrismaService } from '@database';
-import { EXPIRATION_REFRESH_TOKEN_IN } from '@modules/authentication/authentication.enum';
-import { AuthenticationService } from '@modules/authentication/services/authentication.service';
+import { EXPIRATION_REFRESH_TOKEN_IN } from '@modules/authentication';
+import { AuthenticationService } from '@modules/authentication/services';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { JwtService } from '@nestjs/jwt';
-import { Test } from '@nestjs/testing';
+import { Test, TestingModule } from '@nestjs/testing';
 import { UserStatus } from '@prisma/client';
 import bcrypt from 'bcryptjs';
-import { Cache } from 'cache-manager';
+import { JwtPayload } from 'jsonwebtoken';
 
 describe('AuthenticationService', () => {
   let service: AuthenticationService;
-  let jwtService: jest.MockedObject<JwtService>;
-  let appConfig: jest.MockedObject<AppConfig>;
-  let prismaService: jest.MockedObject<PrismaService>;
-  let cacheService: jest.MockedObject<Cache>;
+  let moduleRef: TestingModule;
 
-  const mockPassword = 'password';
-  const mockEmail = 'example@google.com';
-  const mockCode = '123456';
-  const mockAccessToken = 'accessToken';
-  const mockRefreshToken = 'refreshToken';
-  const mockId = '7e97e07f-843f-4ff4-b168-2854104118c7';
-  const mockUser = {
-    id: mockId,
-    email: mockEmail,
+  const mockReqUser = {
+    id: '7e97e07f-843f-4ff4-b168-2854104118c7',
+    email: 'example@google.com',
     status: UserStatus.ACTIVE,
   };
 
+  const mockCacheService = {
+    get: jest.fn(),
+  };
+  const mockJwtService = {
+    signAsync: jest.fn(),
+  };
+  const mockPrismaService = {
+    user: {
+      findUnique: jest.fn(),
+    },
+  };
+  const mockAppConfig = {
+    webUrl: 'http://localhost:6688',
+    jwtSecret: 'test-secret',
+  };
+
   beforeEach(async () => {
-    jwtService = {
-      signAsync: jest.fn(),
-    } as jest.MockedObject<JwtService>;
-
-    appConfig = {
-      webUrl: 'http://localhost:6688',
-      jwtSecret: 'test-secret',
-    } as jest.MockedObject<AppConfig>;
-
-    prismaService = {
-      user: {
-        findUnique: jest.fn(),
-      },
-    } as any as jest.MockedObject<PrismaService>;
-
-    cacheService = {
-      get: jest.fn(),
-    } as jest.MockedObject<Cache>;
-
-    const testModule = await Test.createTestingModule({
+    moduleRef = await Test.createTestingModule({
       providers: [
         AuthenticationService,
         {
-          provide: JwtService,
-          useValue: jwtService,
+          provide: AppConfig,
+          useValue: mockAppConfig,
         },
         {
-          provide: AppConfig,
-          useValue: appConfig,
+          provide: JwtService,
+          useValue: mockJwtService,
         },
         {
           provide: PrismaService,
-          useValue: prismaService,
+          useValue: mockPrismaService,
         },
         {
           provide: CACHE_MANAGER,
-          useValue: cacheService,
+          useValue: mockCacheService,
         },
       ],
     }).compile();
 
-    service = testModule.get<AuthenticationService>(AuthenticationService);
+    service = moduleRef.get<AuthenticationService>(AuthenticationService);
+  });
+
+  afterEach(async () => {
+    jest.clearAllMocks();
+    await moduleRef.close();
   });
 
   describe('generateHashPassword', () => {
-    it('should generate hash password success', async () => {
-      const hashedPassword = await service.generateHashPassword(mockPassword);
+    const password = 'Password@123';
+
+    it('Should generate hashed password successfully', async () => {
+      const hashedPassword = await service.generateHashPassword(password);
 
       expect(hashedPassword).toBeDefined();
-      expect(hashedPassword).not.toBe(mockPassword);
-      expect(await bcrypt.compare(mockPassword, hashedPassword)).toBe(true);
+      expect(hashedPassword).not.toEqual(password);
+      await expect(bcrypt.compare(password, hashedPassword)).resolves.toEqual(
+        true,
+      );
+    });
+
+    it('Should throw throw error if bcrypt failed', async () => {
+      service.generateHashPassword = jest
+        .fn()
+        .mockRejectedValueOnce(new Error('Something wrong!'));
+
+      await expect(service.generateHashPassword(password)).rejects.toThrow(
+        'Something wrong!',
+      );
     });
   });
 
   describe('generateVerificationLink', () => {
-    it('should generate correct verification link', () => {
-      const expected = `${appConfig.webUrl}/verify?email=${encodeURIComponent(mockEmail)}&code=${mockCode}`;
+    it('Should generate verification link correctly', () => {
+      const verificationLink = service.generateVerificationLink(
+        mockReqUser.email,
+        '12345',
+      );
 
-      expect(service.generateVerificationLink(mockEmail, mockCode)).toBe(
-        expected,
+      expect(verificationLink).toEqual(
+        `${mockAppConfig.webUrl}/verify?email=example%40google.com&code=12345`,
       );
     });
   });
 
   describe('getVerificationCacheKey', () => {
-    it('should generate verification cache key', () => {
-      expect(service.getVerificationCacheKey(mockEmail)).toBe(
-        `verification:${mockEmail}`,
+    it('Should generate verification cache key correctly', () => {
+      const verificationCacheKey = service.getVerificationCacheKey(
+        mockReqUser.email,
       );
+
+      expect(verificationCacheKey).toEqual('verification:example@google.com');
     });
   });
 
   describe('getRefreshTokenCacheKey', () => {
-    it('should generate refresh token cache key', () => {
-      expect(service.getRefreshTokenCacheKey(mockEmail)).toBe(
-        `refreshToken:${mockEmail}`,
+    it('Should generate refresh token cache key correctly', () => {
+      const refreshTokenCacheKey = service.getRefreshTokenCacheKey(
+        mockReqUser.email,
       );
+
+      expect(refreshTokenCacheKey).toEqual('refreshToken:example@google.com');
     });
   });
 
   describe('generateToken', () => {
-    it('should generate access and refresh tokens', async () => {
-      jwtService.signAsync
-        .mockResolvedValueOnce(mockAccessToken)
-        .mockResolvedValueOnce(mockRefreshToken);
+    const accessToken = 'access-token';
+    const refreshToken = 'refresh-token';
 
-      const generatedToken = await service.generateToken(mockUser);
+    it('Should generate token successfully', async () => {
+      mockJwtService.signAsync
+        .mockResolvedValueOnce(accessToken)
+        .mockResolvedValueOnce(refreshToken);
 
-      expect(generatedToken).toEqual({
-        accessToken: mockAccessToken,
-        refreshToken: mockRefreshToken,
-      });
-
-      const payloadToken = {
-        sub: mockUser.id,
-        email: mockUser.email,
-        status: mockUser.status,
+      const payload: JwtPayload = {
+        sub: mockReqUser.id,
+        email: mockReqUser.email,
+        status: mockReqUser.status,
       };
+      const token = await service.generateToken(mockReqUser);
 
-      expect(jwtService.signAsync).toHaveBeenCalledWith(payloadToken);
-
-      expect(jwtService.signAsync).toHaveBeenCalledWith(payloadToken, {
-        secret: appConfig.jwtSecret,
+      expect(token).toEqual({
+        accessToken,
+        refreshToken,
+      });
+      expect(mockJwtService.signAsync).toHaveBeenCalledTimes(2);
+      expect(mockJwtService.signAsync).toHaveBeenCalledWith(payload);
+      expect(mockJwtService.signAsync).toHaveBeenCalledWith(payload, {
+        secret: mockAppConfig.jwtSecret,
         expiresIn: EXPIRATION_REFRESH_TOKEN_IN,
       });
+    });
+
+    it('Should throw error if jwt service failed', async () => {
+      mockJwtService.signAsync.mockRejectedValueOnce(
+        new Error('Something wrong!'),
+      );
+
+      await expect(service.generateToken(mockReqUser)).rejects.toThrow(
+        'Something wrong!',
+      );
     });
   });
 
   describe('generateVerificationCode', () => {
-    it('should generate valid verification code', () => {
-      const generatedCode = service.generateVerificationCode();
+    it('Should generate verification code successfully', () => {
+      const verificationCode = service.generateVerificationCode();
 
-      expect(generatedCode).toMatch(/^\d{6}$/);
-      expect(parseInt(generatedCode)).toBeGreaterThanOrEqual(100000);
-      expect(parseInt(generatedCode)).toBeLessThanOrEqual(999999);
+      expect(verificationCode).toBeDefined();
+      expect(verificationCode.length).toEqual(6);
+      expect(Number(verificationCode)).toBeGreaterThanOrEqual(100000);
+      expect(Number(verificationCode)).toBeLessThanOrEqual(999999);
     });
   });
 
   describe('isEmailExisted', () => {
-    it('should return true if user exists in database', async () => {
-      (prismaService.user.findUnique as jest.Mock).mockResolvedValue({
-        id: mockId,
+    it('Should return true if email existed in database', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValueOnce(mockReqUser);
+      mockCacheService.get.mockResolvedValueOnce(null);
+
+      const isEmailExisted = await service.isEmailExisted(mockReqUser.email);
+
+      expect(isEmailExisted).toEqual(true);
+      expect(mockPrismaService.user.findUnique).toHaveBeenCalledTimes(1);
+      expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
+        where: {
+          email: mockReqUser.email,
+        },
+        select: {
+          id: true,
+        },
       });
-      cacheService.get.mockResolvedValue(null);
-
-      expect(await service.isEmailExisted(mockEmail)).toBe(true);
+      expect(mockCacheService.get).toHaveBeenCalledTimes(1);
+      expect(mockCacheService.get).toHaveBeenCalledWith(mockReqUser.email);
     });
 
-    it('should return true if user exists in cache', async () => {
-      (prismaService.user.findUnique as jest.Mock).mockResolvedValue(null);
-      cacheService.get.mockResolvedValue({ id: '1' });
+    it('Should return true if email existed in cache', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValueOnce(null);
+      mockCacheService.get.mockResolvedValueOnce(JSON.stringify(mockReqUser));
 
-      expect(await service.isEmailExisted(mockEmail)).toBe(true);
+      const isEmailExisted = await service.isEmailExisted(mockReqUser.email);
+
+      expect(isEmailExisted).toEqual(true);
+      expect(mockPrismaService.user.findUnique).toHaveBeenCalledTimes(1);
+      expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
+        where: {
+          email: mockReqUser.email,
+        },
+        select: {
+          id: true,
+        },
+      });
+      expect(mockCacheService.get).toHaveBeenCalledTimes(1);
+      expect(mockCacheService.get).toHaveBeenCalledWith(mockReqUser.email);
     });
 
-    it('should return false if user does not exist', async () => {
-      (prismaService.user.findUnique as jest.Mock).mockResolvedValue(null);
-      cacheService.get.mockResolvedValue(null);
+    it('Should return false if email does not exist in cache and database', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValueOnce(null);
+      mockCacheService.get.mockResolvedValueOnce(null);
 
-      expect(await service.isEmailExisted(mockEmail)).toBe(false);
+      const isEmailExisted = await service.isEmailExisted(mockReqUser.email);
+
+      expect(isEmailExisted).toEqual(false);
+      expect(mockPrismaService.user.findUnique).toHaveBeenCalledTimes(1);
+      expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
+        where: {
+          email: mockReqUser.email,
+        },
+        select: {
+          id: true,
+        },
+      });
+      expect(mockCacheService.get).toHaveBeenCalledTimes(1);
+      expect(mockCacheService.get).toHaveBeenCalledWith(mockReqUser.email);
+    });
+
+    it('Should throw error if finding database failed', async () => {
+      mockPrismaService.user.findUnique.mockRejectedValueOnce(
+        new Error('Something wrong!'),
+      );
+
+      await expect(service.isEmailExisted(mockReqUser.email)).rejects.toThrow(
+        'Something wrong!',
+      );
+      expect(mockCacheService.get).not.toHaveBeenCalled();
+    });
+
+    it('Should throw error if finding cache failed', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValueOnce(mockReqUser);
+      mockCacheService.get.mockRejectedValueOnce(new Error('Something wrong!'));
+
+      await expect(service.isEmailExisted(mockReqUser.email)).rejects.toThrow(
+        'Something wrong!',
+      );
+      expect(mockPrismaService.user.findUnique).toHaveBeenCalledTimes(1);
+      expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
+        where: {
+          email: mockReqUser.email,
+        },
+        select: {
+          id: true,
+        },
+      });
     });
   });
 
   describe('isValidPassword', () => {
-    it('should return true for matching passwords', async () => {
-      const hashedPassword = await bcrypt.hash(mockPassword, 10);
+    const password = 'Password@123';
 
-      expect(await service.isValidPassword(mockPassword, hashedPassword)).toBe(
-        true,
+    it('Should return true if matching passwords', async () => {
+      const hashedPassword = await service.generateHashPassword(password);
+      const isValidPassword = await service.isValidPassword(
+        password,
+        hashedPassword,
       );
+
+      expect(isValidPassword).toEqual(true);
     });
 
-    it('should return false for non-matching passwords', async () => {
-      const hashedPassword = await bcrypt.hash('differentPassword', 10);
-
-      expect(await service.isValidPassword(mockPassword, hashedPassword)).toBe(
-        false,
+    it('Should return false if no-matching passwords', async () => {
+      const isValidPassword = await service.isValidPassword(
+        password,
+        'hashed-password',
       );
+
+      expect(isValidPassword).toEqual(false);
+    });
+
+    it('Should throw throw error if bcrypt failed', async () => {
+      service.isValidPassword = jest
+        .fn()
+        .mockRejectedValueOnce(new Error('Something wrong!'));
+
+      await expect(
+        service.isValidPassword(password, 'hashed-password'),
+      ).rejects.toThrow('Something wrong!');
     });
   });
 });

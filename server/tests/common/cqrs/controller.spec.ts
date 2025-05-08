@@ -1,25 +1,31 @@
 import { ControllerBase } from '@common/cqrs';
 import { Logger } from '@nestjs/common';
-import { Test } from '@nestjs/testing';
+import { Test, TestingModule } from '@nestjs/testing';
 
 class TestController extends ControllerBase {}
 
-describe('ControllerBaseCQRS', () => {
-  let controllerBase: TestController;
+describe('ControllerBase', () => {
+  let controller: ControllerBase;
+  let moduleRef: TestingModule;
 
   beforeEach(async () => {
-    const testModule = await Test.createTestingModule({
-      providers: [TestController],
+    moduleRef = await Test.createTestingModule({
+      providers: [{ provide: ControllerBase, useClass: TestController }],
     }).compile();
-
-    controllerBase = testModule.get<TestController>(TestController);
+    controller = moduleRef.get<ControllerBase>(ControllerBase);
   });
 
-  it('should create an instance of ControllerBase', () => {
-    expect(controllerBase).toBeInstanceOf(TestController);
+  afterEach(async () => {
+    await moduleRef.close();
   });
 
-  it('should have a logger instance', () => {
-    expect(controllerBase['logger']).toBeInstanceOf(Logger);
+  it('Should be defined', () => {
+    expect(controller).toBeDefined();
+    expect(controller).toBeInstanceOf(ControllerBase);
+  });
+
+  it('Should have logger instance exists', () => {
+    expect(controller['logger']).toBeDefined();
+    expect(controller['logger']).toBeInstanceOf(Logger);
   });
 });

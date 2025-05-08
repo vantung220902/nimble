@@ -1,53 +1,72 @@
-import { MatchWith } from '@common/decorators/match-with.decorator';
+import { MatchWith } from '@common/decorators';
 import { validate } from 'class-validator';
 
-class SignUpRequestBody {
+class TestClass {
   password: string;
 
-  @MatchWith('password')
+  @MatchWith('password', { message: 'Confirm does not match with password' })
   confirmPassword: string;
-
-  constructor(password: string, confirmPassword: string) {
-    this.password = password;
-    this.confirmPassword = confirmPassword;
-  }
 }
 
-describe('MatchWithDecorator', () => {
-  const mockPassword = 'password';
-  let mockConfirmPassword = 'password';
+describe('MatchWith', () => {
+  it('Should be validate matching pass', async () => {
+    const testInstance = new TestClass();
+    testInstance.password = 'password';
+    testInstance.confirmPassword = 'password';
 
-  it('should pass validation when values match', async () => {
-    const dto = new SignUpRequestBody(mockPassword, mockConfirmPassword);
-    const errors = await validate(dto);
-    expect(errors.length).toBe(0);
+    const validationResponse = await validate(testInstance);
+    expect(validationResponse).toHaveLength(0);
   });
 
-  it('should fail validation when values do not match', async () => {
-    mockConfirmPassword = 'different';
-    const dto = new SignUpRequestBody(mockPassword, mockConfirmPassword);
-    const errors = await validate(dto);
+  it('Should be validate matching not pass', async () => {
+    const testInstance = new TestClass();
+    testInstance.password = 'password';
+    testInstance.confirmPassword = 'different password';
 
-    expect(errors.length).toBe(1);
-    expect(errors[0].constraints).toHaveProperty('MatchWith');
-    expect(errors[0].constraints?.MatchWith).toBe(
-      'password must match with confirmPassword',
+    const validationResponse = await validate(testInstance);
+    expect(validationResponse).toHaveLength(1);
+    expect(validationResponse[0].constraints).toHaveProperty('MatchWith');
+    expect(validationResponse[0].constraints['MatchWith']).toBe(
+      'Confirm does not match with password',
     );
   });
 
-  it('should handle undefined values', async () => {
-    const dto = new SignUpRequestBody(mockPassword, undefined);
-    const errors = await validate(dto);
+  it('Should be validate matching throw default error message', async () => {
+    class DefaultErrorMsgClass {
+      password: string;
 
-    expect(errors.length).toBe(1);
-    expect(errors[0].constraints).toHaveProperty('MatchWith');
+      @MatchWith('password')
+      confirmPassword: string;
+    }
+
+    const defaultErrorMsgInstance = new DefaultErrorMsgClass();
+    defaultErrorMsgInstance.password = 'password';
+    defaultErrorMsgInstance.confirmPassword = 'different password';
+
+    const validationResponse = await validate(defaultErrorMsgInstance);
+    expect(validationResponse).toHaveLength(1);
+    expect(validationResponse[0].constraints).toHaveProperty('MatchWith');
+    expect(validationResponse[0].constraints['MatchWith']).toBe(
+      `password must match with confirmPassword`,
+    );
   });
 
-  it('should handle null values', async () => {
-    const dto = new SignUpRequestBody(mockPassword, null);
-    const errors = await validate(dto);
+  it('Should be validation matching always not pass due to invalid property name', async () => {
+    class InvalidPropertyTestClass {
+      password: string;
 
-    expect(errors.length).toBe(1);
-    expect(errors[0].constraints).toHaveProperty('MatchWith');
+      @MatchWith('invalidProperty', {
+        message: 'Confirm does not match with password',
+      })
+      confirmPassword: string;
+    }
+
+    const invalidPropertyInstance = new InvalidPropertyTestClass();
+    invalidPropertyInstance.password = 'password';
+    invalidPropertyInstance.confirmPassword = 'password';
+
+    const validationResponse = await validate(invalidPropertyInstance);
+    expect(validationResponse).toHaveLength(1);
+    expect(validationResponse[0].target['invalidProperty']).toBeUndefined();
   });
 });

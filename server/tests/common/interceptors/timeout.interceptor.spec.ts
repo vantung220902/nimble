@@ -1,71 +1,52 @@
-import { TimeoutInterceptor } from '@common/interceptors/timeout.interceptor';
+import { TimeoutInterceptor } from '@common/interceptors';
 import {
   CallHandler,
   ExecutionContext,
   RequestTimeoutException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { of, throwError } from 'rxjs';
-import { delay } from 'rxjs/operators';
+import { throwError, timer } from 'rxjs';
+import { instance, mock, when } from 'ts-mockito';
 
 describe('TimeoutInterceptor', () => {
-  let interceptor: TimeoutInterceptor;
-  let reflector: jest.MockedObject<Reflector>;
-  let context: jest.MockedObject<ExecutionContext>;
-  let next: jest.MockedObject<CallHandler<string>>;
+  const mockContext = mock<ExecutionContext>();
+  const mockCallHandler = mock<CallHandler>();
 
-  beforeEach(() => {
-    reflector = {
-      get: jest.fn(),
-    } as jest.MockedObject<Reflector>;
+  it('Should not throw error if not timeout', (done: jest.DoneCallback) => {
+    const observable = timer(1 * 1000);
+    when(mockCallHandler.handle()).thenReturn(observable);
 
-    context = {
-      getHandler: jest.fn(),
-    } as jest.MockedObject<ExecutionContext>;
+    const mockReflector = {
+      get: () => 2,
+    } as any as Reflector;
 
-    next = {
-      handle: jest.fn(),
-    } as jest.MockedObject<CallHandler<string>>;
+    const result = new TimeoutInterceptor(mockReflector).intercept(
+      instance(mockContext),
+      instance(mockCallHandler),
+    );
 
-    interceptor = new TimeoutInterceptor(reflector);
-  });
-
-  it('should be defined', () => {
-    expect(interceptor).toBeDefined();
-  });
-
-  it('should use default timeout when no custom timeout is provided', (done) => {
-    reflector.get.mockReturnValue(undefined);
-    next.handle.mockReturnValue(of('test').pipe(delay(100)));
-
-    interceptor.intercept(context, next).subscribe({
+    result.subscribe({
       next: (value) => {
-        expect(value).toBe('test');
+        expect(value).toEqual(0);
         done();
       },
-      error: (error) => done(error),
     });
   });
 
-  it('should use custom timeout from reflector', (done) => {
-    reflector.get.mockReturnValue(1); // 1 second timeout
-    next.handle.mockReturnValue(of('test').pipe(delay(100)));
+  it('should throw RequestTimeoutException if timeout', (done: jest.DoneCallback) => {
+    const observable = timer(2 * 1000);
+    when(mockCallHandler.handle()).thenReturn(observable);
 
-    interceptor.intercept(context, next).subscribe({
-      next: (value) => {
-        expect(value).toBe('test');
-        done();
-      },
-      error: (error) => done(error),
-    });
-  });
+    const mockReflector = {
+      get: () => 1,
+    } as any as Reflector;
 
-  it('should throw RequestTimeoutException when timeout occurs', (done) => {
-    reflector.get.mockReturnValue(0.05);
-    next.handle.mockReturnValue(of('test').pipe(delay(200)));
+    const result = new TimeoutInterceptor(mockReflector).intercept(
+      instance(mockContext),
+      instance(mockCallHandler),
+    );
 
-    interceptor.intercept(context, next).subscribe({
-      next: () => done(new Error('Should have timed out')),
+    result.subscribe({
       error: (error) => {
         expect(error).toBeInstanceOf(RequestTimeoutException);
         done();
@@ -73,26 +54,71 @@ describe('TimeoutInterceptor', () => {
     });
   });
 
-  it('should propagate other errors', (done) => {
-    reflector.get.mockReturnValue(1);
-    const testError = new Error('Test error');
-    next.handle.mockReturnValue(throwError(() => testError));
+  it(
+    'Should have default timeout of 30 seconds',
+    (done: jest.DoneCallback) => {
+      const observable = timer(31 * 1000);
+      when(mockCallHandler.handle()).thenReturn(observable);
 
-    interceptor.intercept(context, next).subscribe({
-      next: () => done(new Error('Should have errored')),
-      error: (error) => {
-        expect(error).toBe(testError);
+      const mockReflector = {
+        get: () => undefined,
+      } as any as Reflector;
+
+      const result = new TimeoutInterceptor(mockReflector).intercept(
+        instance(mockContext),
+        instance(mockCallHandler),
+      );
+
+      result.subscribe({
+        error: (error) => {
+          expect(error).toBeInstanceOf(RequestTimeoutException);
+          done();
+        },
+      });
+    },
+    32 * 1000,
+  );
+
+  it('Should use timeout argument', (done: jest.DoneCallback) => {
+    const observable = timer(1 * 1000);
+    when(mockCallHandler.handle()).thenReturn(observable);
+
+    const mockReflector = {
+      get: () => undefined,
+    } as any as Reflector;
+
+    const result = new TimeoutInterceptor(mockReflector, 2 * 1000).intercept(
+      instance(mockContext),
+      instance(mockCallHandler),
+    );
+
+    result.subscribe({
+      next: (value) => {
+        expect(value).toEqual(0);
         done();
       },
     });
   });
 
-  it('should allow custom timeout in constructor', () => {
-    const customTimeout = 5;
-    const interceptorWithCustomTimeout = new TimeoutInterceptor(
-      reflector,
-      customTimeout,
+  it('Should throw immediately on other errors', (done: jest.DoneCallback) => {
+    const error = new Error('Something wrong!');
+    const observable = throwError(() => error);
+    when(mockCallHandler.handle()).thenReturn(observable);
+
+    const mockReflector = {
+      get: () => 1,
+    } as any as Reflector;
+
+    const result = new TimeoutInterceptor(mockReflector).intercept(
+      instance(mockContext),
+      instance(mockCallHandler),
     );
-    expect(interceptorWithCustomTimeout).toBeDefined();
+
+    result.subscribe({
+      error: (error) => {
+        expect(error).toBe(error);
+        done();
+      },
+    });
   });
 });

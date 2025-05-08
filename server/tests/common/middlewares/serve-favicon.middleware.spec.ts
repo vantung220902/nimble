@@ -1,19 +1,21 @@
 import { noContent, useServingFavIcon } from '@common/middlewares';
-import { INestApplication } from '@nestjs/common';
+import { HttpStatus, INestApplication } from '@nestjs/common';
+import { Request, Response } from 'express';
 import { anything, instance, mock, verify } from 'ts-mockito';
 
 describe('useServingFavIcon', () => {
-  test('should serve /favicon.ico', () => {
+  it('Should server /favicon.ico', () => {
     const mockApp = mock<INestApplication>();
+
     useServingFavIcon(instance(mockApp));
     verify(mockApp.use('/favicon.ico', anything())).once();
   });
 
-  test('should return 204 no_content', () => {
-    const mockReq = mock<any>();
-    const mockRes = mock<any>();
+  it('Should return 204 NO_CONTENT', () => {
+    const mockRes = mock<Response>();
+    const mockReq = mock<Request>();
 
     noContent(instance(mockReq), instance(mockRes));
-    verify(mockRes.sendStatus(204)).once();
+    verify(mockRes.sendStatus(HttpStatus.NO_CONTENT)).once();
   });
 });

@@ -1,102 +1,94 @@
-import { SignOutCommand } from '@modules/authentication/application/commands/sign-out/sign-out.command';
-import { SignOutHandler } from '@modules/authentication/application/commands/sign-out/sign-out.handler';
+import { SignOutHandler } from '@modules/authentication/application';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { JwtService } from '@nestjs/jwt';
-import { Test } from '@nestjs/testing';
+import { Test, TestingModule } from '@nestjs/testing';
 import { UserStatus } from '@prisma/client';
-import { Cache } from 'cache-manager';
 
 describe('SignOutHandler', () => {
   let handler: SignOutHandler;
-  let jwtService: jest.MockedObject<JwtService>;
-  let cacheService: jest.MockedObject<Cache>;
+  let moduleRef: TestingModule;
+
+  const mockJwtService = {
+    decode: jest.fn(),
+  };
+  const mockCacheService = {
+    set: jest.fn(),
+  };
 
   beforeEach(async () => {
-    jwtService = {
-      decode: jest.fn(),
-    } as jest.MockedObject<JwtService>;
-
-    cacheService = {
-      set: jest.fn(),
-    } as jest.MockedObject<Cache>;
-
-    const testModule = await Test.createTestingModule({
+    moduleRef = await Test.createTestingModule({
       providers: [
         SignOutHandler,
         {
           provide: JwtService,
-          useValue: jwtService,
+          useValue: mockJwtService,
         },
         {
           provide: CACHE_MANAGER,
-          useValue: cacheService,
+          useValue: mockCacheService,
         },
       ],
     }).compile();
 
-    handler = testModule.get<SignOutHandler>(SignOutHandler);
+    handler = moduleRef.get(SignOutHandler);
   });
 
-  it('should be defined', () => {
-    expect(handler).toBeDefined();
+  afterEach(async () => {
+    jest.clearAllMocks();
+    await moduleRef.close();
   });
 
   describe('execute', () => {
-    const mockCommand = new SignOutCommand('accessToken', {
+    const mockAccessToken = 'accessToken';
+    const mockReqUser = {
       sub: '7e97e07f-843f-4ff4-b168-2854104118c7',
       email: 'example@google.com',
       status: UserStatus.ACTIVE,
+    };
+
+    it('Should sign out successfully', async () => {
+      mockJwtService.decode.mockResolvedValueOnce({ exp: 0 });
+
+      await handler.execute({
+        accessToken: mockAccessToken,
+        reqUser: mockReqUser,
+      });
+
+      expect(mockJwtService.decode).toHaveBeenCalledTimes(1);
+      expect(mockJwtService.decode).toHaveBeenCalledWith(mockAccessToken);
+      expect(mockCacheService.set).not.toHaveBeenCalled();
     });
 
-    it('should blacklist token if it has not expired', async () => {
-      const stillValidTokenTime = Math.floor(
-        (Date.now() + Math.random() * 10000) / 1000,
-      );
-      jwtService.decode.mockReturnValue({ exp: stillValidTokenTime });
+    it('Should set signed out access token into blacklist', async () => {
+      mockJwtService.decode.mockResolvedValueOnce({ exp: Date.now() });
 
-      await handler.execute(mockCommand);
+      await handler.execute({
+        accessToken: mockAccessToken,
+        reqUser: mockReqUser,
+      });
 
-      expect(jwtService.decode).toHaveBeenCalledWith(mockCommand.accessToken);
-      expect(cacheService.set).toHaveBeenCalledWith(
-        `blacklist:${mockCommand.accessToken}`,
+      expect(mockJwtService.decode).toHaveBeenCalledTimes(1);
+      expect(mockJwtService.decode).toHaveBeenCalledWith(mockAccessToken);
+      expect(mockCacheService.set).toHaveBeenCalledTimes(1);
+      expect(mockCacheService.set).toHaveBeenCalledWith(
+        `blacklist:${mockAccessToken}`,
         'block',
         expect.any(Number),
       );
     });
 
-    it('should not blacklist token if it has expired', async () => {
-      const expiredTokenTime = Math.floor(
-        (Date.now() - Math.random() * 10000) / 1000,
+    it('Should throw error if jwt service failed', async () => {
+      mockJwtService.decode.mockRejectedValueOnce(
+        new Error('Something Wrong!'),
       );
 
-      jwtService.decode.mockReturnValue({ exp: expiredTokenTime });
-
-      await handler.execute(mockCommand);
-
-      expect(jwtService.decode).toHaveBeenCalledWith(mockCommand.accessToken);
-      expect(cacheService.set).not.toHaveBeenCalled();
-    });
-
-    it('should handle cache service errors', async () => {
-      const stillValidTokenTime = Math.floor(
-        (Date.now() + Math.random() * 10000) / 1000,
-      );
-      jwtService.decode.mockReturnValue({ exp: stillValidTokenTime });
-      cacheService.set.mockRejectedValue(new Error('Somethings wrong'));
-
-      await expect(handler.execute(mockCommand)).rejects.toThrow(
-        'Somethings wrong',
-      );
-    });
-
-    it('should handle JWT decode errors', async () => {
-      jwtService.decode.mockImplementation(() => {
-        throw new Error('JWT decode error');
-      });
-
-      await expect(handler.execute(mockCommand)).rejects.toThrow(
-        'JWT decode error',
-      );
+      await expect(
+        handler.execute({
+          accessToken: mockAccessToken,
+          reqUser: mockReqUser,
+        }),
+      ).rejects.toThrow('Something Wrong!');
+      expect(mockCacheService.set).not.toHaveBeenCalled();
     });
   });
 });

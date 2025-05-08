@@ -1,15 +1,13 @@
 import { DefaultPagination, PaginationParams } from '@common/decorators';
-import { ExecutionContext } from '@nestjs/common';
 import { ROUTE_ARGS_METADATA } from '@nestjs/common/constants';
-import { HttpArgumentsHost } from '@nestjs/common/interfaces';
+import { ExecutionContext, HttpArgumentsHost } from '@nestjs/common/interfaces';
+import { Request, Response } from 'express';
 import { instance, mock, reset, when } from 'ts-mockito';
 
 describe('PaginationParams', () => {
   function getParamDecoratorFactory() {
     class TestController {
-      public testHTTPMethodImplementation(@PaginationParams() value: any) {
-        void value;
-      }
+      public testHTTPMethodImplementation(@PaginationParams() _params: any) {}
     }
 
     const args = Reflect.getMetadata(
@@ -17,11 +15,12 @@ describe('PaginationParams', () => {
       TestController,
       'testHTTPMethodImplementation',
     );
+
     return args[Object.keys(args)[0]].factory;
   }
 
-  const mockReq = mock<any>();
-  const mockRes = mock<any>();
+  const mockReq = mock<Request>();
+  const mockRes = mock<Response>();
   const mockHttpHost = mock<HttpArgumentsHost>();
   const mockContext = mock<ExecutionContext>();
 
@@ -32,96 +31,147 @@ describe('PaginationParams', () => {
   });
 
   afterEach(() => {
-    reset(mockReq, mockRes, mockHttpHost, mockContext);
+    reset<any>(mockRes, mockReq, mockContext, mockHttpHost);
   });
 
-  test('should calculate pagination params from request query', () => {
-    when(mockReq.query).thenReturn({
-      skip: 200,
-      take: 100,
-    });
+  it('Should calculate pagination params from request query', () => {
+    const mockQuery = {
+      skip: '200',
+      take: '10',
+    };
+    when(mockReq.query).thenReturn(mockQuery);
 
     const factory = getParamDecoratorFactory();
-    const response = factory(undefined, instance(mockContext));
-    expect(response).toEqual(
+    const paginationParam = factory(undefined, instance(mockContext));
+
+    expect(paginationParam).toEqual(
       expect.objectContaining({
         skip: 200,
-        take: 100,
-        params: {
-          skip: 200,
-          take: 100,
-        },
+        take: 10,
+        params: mockQuery,
       }),
     );
   });
 
-  test('should use default take if not specified', () => {
-    when(mockReq.query).thenReturn({
-      skip: 200,
-    });
+  it('Should use default take if not specified', () => {
+    const mockQuery = {
+      skip: '200',
+    };
+
+    when(mockReq.query).thenReturn(mockQuery);
 
     const factory = getParamDecoratorFactory();
-    const defaultPagination: DefaultPagination = {
-      defaultSkip: 0,
-      defaultTake: 50,
-      maxAllowedSize: 100,
-    };
-    const response = factory(defaultPagination, instance(mockContext));
-    expect(response).toEqual(
+    const paginationParam = factory(undefined, instance(mockContext));
+
+    expect(paginationParam).toEqual(
       expect.objectContaining({
         skip: 200,
-        take: 50,
-        params: {
-          skip: 200,
-        },
+        take: 10,
+        params: mockQuery,
       }),
     );
   });
 
-  test('should respect maxAllowedSize when taking more than maxAllowedSize', () => {
-    when(mockReq.query).thenReturn({
-      skip: 200,
-      take: 500,
-    });
+  it('Should use default take argument if not specified', () => {
+    const mockQuery = {
+      skip: '200',
+    };
+    when(mockReq.query).thenReturn(mockQuery);
 
     const factory = getParamDecoratorFactory();
-    const defaultPagination: DefaultPagination = {
-      defaultSkip: 0,
-      defaultTake: 50,
+    const defaultParams: DefaultPagination = {
+      defaultTake: 20,
       maxAllowedSize: 100,
     };
-    const response = factory(defaultPagination, instance(mockContext));
-    expect(response).toEqual(
+    const paginationParam = factory(defaultParams, instance(mockContext));
+
+    expect(paginationParam).toEqual(
       expect.objectContaining({
         skip: 200,
-        take: 100,
-        params: {
-          skip: 200,
-          take: 500,
-        },
+        take: defaultParams.defaultTake,
+        params: mockQuery,
       }),
     );
   });
 
-  test('should use default skip if not specified', () => {
-    when(mockReq.query).thenReturn({
-      take: 100,
-    });
+  it('Should use default skip if not specified', () => {
+    const mockQuery = {
+      take: '10',
+    };
+    when(mockReq.query).thenReturn(mockQuery);
 
     const factory = getParamDecoratorFactory();
-    const defaultPagination: DefaultPagination = {
-      defaultSkip: 0,
-      defaultTake: 50,
-      maxAllowedSize: 100,
-    };
-    const response = factory(defaultPagination, instance(mockContext));
-    expect(response).toEqual(
+    const paginationParam = factory(undefined, instance(mockContext));
+
+    expect(paginationParam).toEqual(
       expect.objectContaining({
         skip: 0,
+        take: 10,
+        params: mockQuery,
+      }),
+    );
+  });
+
+  it('Should use default skip argument if not specified', () => {
+    const mockQuery = {
+      take: '10',
+    };
+    when(mockReq.query).thenReturn(mockQuery);
+
+    const factory = getParamDecoratorFactory();
+    const defaultParams: DefaultPagination = {
+      defaultSkip: 20,
+      defaultTake: 10,
+      maxAllowedSize: 100,
+    };
+    const paginationParam = factory(defaultParams, instance(mockContext));
+
+    expect(paginationParam).toEqual(
+      expect.objectContaining({
+        skip: defaultParams.defaultSkip,
+        take: defaultParams.defaultTake,
+        params: mockQuery,
+      }),
+    );
+  });
+
+  it('Should use maxAllowedSize when take params greater than maxAllowedSize', () => {
+    const mockQuery = {
+      take: '200',
+      skip: '10',
+    };
+    when(mockReq.query).thenReturn(mockQuery);
+
+    const factory = getParamDecoratorFactory();
+    const paginationParam = factory(undefined, instance(mockContext));
+
+    expect(paginationParam).toEqual(
+      expect.objectContaining({
+        skip: 10,
         take: 100,
-        params: {
-          take: 100,
-        },
+        params: mockQuery,
+      }),
+    );
+  });
+
+  it('Should use maxAllowedSize argument if take params greater than maxAllowedSize', () => {
+    const mockQuery = {
+      take: '60',
+      skip: '10',
+    };
+    when(mockReq.query).thenReturn(mockQuery);
+
+    const factory = getParamDecoratorFactory();
+    const defaultParams: DefaultPagination = {
+      maxAllowedSize: 20,
+    };
+    const paginationParam = factory(defaultParams, instance(mockContext));
+
+    expect(paginationParam).toEqual(
+      expect.objectContaining({
+        skip: 10,
+        take: defaultParams.maxAllowedSize,
+        params: mockQuery,
       }),
     );
   });

@@ -1,6 +1,7 @@
 import { AppConfig } from '@config';
-import { EmailService } from '@email/services/email.service';
-import { Test } from '@nestjs/testing';
+import { SendHtmlEmailOptions } from '@email/interfaces';
+import { EmailService } from '@email/services';
+import { Test, TestingModule } from '@nestjs/testing';
 import SendGrid from '@sendgrid/mail';
 
 jest.mock('@sendgrid/mail', () => ({
@@ -9,43 +10,48 @@ jest.mock('@sendgrid/mail', () => ({
 }));
 
 describe('EmailService', () => {
-  let service: EmailService;
-  let appConfig: jest.MockedObject<AppConfig>;
+  let emailService: EmailService;
+  let appConfig: AppConfig;
+  let moduleRef: TestingModule;
+
+  const mockAppConfig = {
+    sendGridApiKey: 'api-key',
+    emailForm: 'example@gmail.com',
+  };
 
   beforeEach(async () => {
-    appConfig = {
-      sendGridApiKey: 'api-key',
-      emailForm: 'example@gmail.com',
-    } as jest.MockedObject<AppConfig>;
-
-    const testModule = await Test.createTestingModule({
+    moduleRef = await Test.createTestingModule({
       providers: [
         EmailService,
         {
           provide: AppConfig,
-          useValue: appConfig,
+          useValue: mockAppConfig,
         },
       ],
     }).compile();
 
-    service = testModule.get<EmailService>(EmailService);
+    emailService = moduleRef.get<EmailService>(EmailService);
+    appConfig = moduleRef.get<AppConfig>(AppConfig);
   });
 
-  afterEach(() => {
-    jest.clearAllMocks();
+  afterEach(async () => {
+    await moduleRef.close();
   });
 
   describe('sendEmail', () => {
-    it('should send email using SendGrid', async () => {
-      const emailOptions = {
+    it('Should send email correctly', async () => {
+      const emailOptions: SendHtmlEmailOptions = {
         to: 'test@example.com',
         subject: 'Nimble',
         html: '<p>Nimble</p>',
       };
 
-      await service.sendEmail(emailOptions);
+      await emailService.sendEmail(emailOptions);
 
-      expect(SendGrid.setApiKey).toHaveBeenCalledWith('api-key');
+      expect(SendGrid.setApiKey).toHaveBeenCalledTimes(1);
+      expect(SendGrid.setApiKey(appConfig.sendGridApiKey));
+
+      expect(SendGrid.send).toHaveBeenCalledTimes(1);
       expect(SendGrid.send).toHaveBeenCalledWith({
         to: emailOptions.to,
         from: appConfig.emailForm,
@@ -63,37 +69,45 @@ describe('EmailService', () => {
       });
     });
 
-    it('should throw error if SendGrid fails', async () => {
-      const error = new Error('SendGrid error');
-      (SendGrid.send as jest.Mock).mockRejectedValueOnce(error);
+    it('Should throw error if SendGrid fails', async () => {
+      (SendGrid.send as jest.Mock).mockRejectedValueOnce(
+        new Error('Something wrong!'),
+      );
 
-      const emailOptions = {
+      const emailOptions: SendHtmlEmailOptions = {
         to: 'test@example.com',
         subject: 'Nimble',
         html: '<p>Nimble</p>',
       };
 
-      await expect(service.sendEmail(emailOptions)).rejects.toThrow(error);
+      await expect(emailService.sendEmail(emailOptions)).rejects.toThrow(
+        'Something wrong!',
+      );
     });
   });
 
   describe('generateVerificationTemplate', () => {
-    it('should generate correct verification email template', () => {
+    it('Should generate verification template correctly', () => {
       const payload = {
-        firstName: 'Test',
-        lastName: 'Test',
-        code: '123456',
+        firstName: 'Tung',
+        lastName: 'Nguyen',
+        code: '12345',
         link: 'http://web.app.com/verify',
       };
 
-      const template = service.generateVerificationTemplate(payload);
+      const verificationTemplate =
+        emailService.generateVerificationTemplate(payload);
 
-      expect(template).toContain(`Hi ${payload.firstName} ${payload.lastName}`);
-      expect(template).toContain(payload.code);
-      expect(template).toContain(payload.link);
+      expect(verificationTemplate).toContain(payload.firstName);
+      expect(verificationTemplate).toContain(payload.lastName);
+      expect(verificationTemplate).toContain(payload.code);
+      expect(verificationTemplate).toContain(payload.link);
+      expect(verificationTemplate).toContain(
+        `Hi ${payload.firstName} ${payload.lastName},`,
+      );
     });
 
-    it('should handle empty payload values', () => {
+    it('Should handle on empty payload', () => {
       const payload = {
         firstName: '',
         lastName: '',
@@ -101,10 +115,14 @@ describe('EmailService', () => {
         link: '',
       };
 
-      const template = service.generateVerificationTemplate(payload);
+      const verificationTemplate =
+        emailService.generateVerificationTemplate(payload);
 
-      expect(template).toContain('Hi  ,');
-      expect(template).toMatch(/<a href="">Verify Account<\/a>/);
+      expect(verificationTemplate).toContain(`Hi  ,`);
+      expect(verificationTemplate).toContain(
+        '<p style="font-size: 24px; font-weight: bold; text-align: center; padding: 10px; background-color: #f5f5f5;"></p>',
+      );
+      expect(verificationTemplate).toContain('<a href="">Verify Account</a>');
     });
   });
 });

@@ -4,56 +4,80 @@ import { instanceToPlain } from 'class-transformer';
 describe('ToBoolean', () => {
   class TestClass {
     @ToBoolean()
-    public booleanProp?: boolean;
+    booleanProps?: boolean;
 
     @ToBoolean()
-    public stringProp?: string;
+    stringProps?: string;
 
     @ToBoolean()
-    public nonConvertibleProp?: number;
+    nonConvertibleProps?: number;
   }
 
-  it('should transform a boolean property into the same boolean', () => {
+  it('Should transform boolean property into the same boolean value', () => {
     const testInstance = new TestClass();
-    testInstance.booleanProp = true;
 
-    const transformed = instanceToPlain(testInstance);
+    testInstance.booleanProps = true;
+    const transformedTrue: TestClass = instanceToPlain(testInstance);
 
-    expect(transformed.booleanProp).toBe(true);
+    testInstance.booleanProps = false;
+    const transformedFalse: TestClass = instanceToPlain(testInstance);
+
+    expect(transformedTrue.booleanProps).toEqual(true);
+    expect(transformedFalse.booleanProps).toEqual(false);
   });
 
-  it('should transform a "true" string property into true', () => {
+  it('Should transform string property "true" into true value', () => {
     const testInstance = new TestClass();
-    testInstance.stringProp = 'true';
 
-    const transformed = instanceToPlain(testInstance);
+    testInstance.stringProps = 'true';
+    const transformed: TestClass = instanceToPlain(testInstance);
 
-    expect(transformed.stringProp).toBe(true);
+    expect(transformed.stringProps).toEqual(true);
   });
 
-  it('should transform a "false" string property into false', () => {
+  it('Should transform string property not "true" into false value', () => {
     const testInstance = new TestClass();
-    testInstance.stringProp = 'false';
 
-    const transformed = instanceToPlain(testInstance);
+    testInstance.stringProps = 'false';
+    const transformedFalseStr: TestClass = instanceToPlain(testInstance);
 
-    expect(transformed.stringProp).toBe(false);
+    testInstance.stringProps = 'not boolean';
+    const transformedStr: TestClass = instanceToPlain(testInstance);
+
+    expect(transformedFalseStr.stringProps).toEqual(false);
+    expect(transformedStr.stringProps).toEqual(false);
   });
 
-  it('should transform an undefined property into undefined', () => {
+  it('Should cannot transform number property', () => {
     const testInstance = new TestClass();
 
-    const transformed = instanceToPlain(testInstance);
+    testInstance.nonConvertibleProps = 1;
+    const transformedNumber: TestClass = instanceToPlain(testInstance);
 
-    expect(transformed.booleanProp).toBeUndefined();
+    expect(transformedNumber.nonConvertibleProps).toBeUndefined();
   });
 
-  it('should transform a non-convertible property into undefined', () => {
+  it('Should transform null value into the same', () => {
     const testInstance = new TestClass();
-    testInstance.nonConvertibleProp = 123;
 
-    const transformed = instanceToPlain(testInstance);
+    testInstance.nonConvertibleProps = null;
+    testInstance.booleanProps = null;
+    testInstance.stringProps = null;
 
-    expect(transformed.nonConvertibleProp).toBeUndefined();
+    const transformedNull: TestClass = instanceToPlain(testInstance);
+
+    expect(transformedNull.nonConvertibleProps).toBeNull();
+    expect(transformedNull.booleanProps).toBeNull();
+    expect(transformedNull.stringProps).toBeNull();
+  });
+
+  it('Should transform undefined property into the same', () => {
+    const testInstance = new TestClass();
+
+    const transformedUndefined: TestClass = instanceToPlain(testInstance);
+
+    expect(transformedUndefined.nonConvertibleProps).toBeUndefined();
+    expect(transformedUndefined.booleanProps).toBeUndefined();
+    expect(transformedUndefined.stringProps).toBeUndefined();
   });
 });

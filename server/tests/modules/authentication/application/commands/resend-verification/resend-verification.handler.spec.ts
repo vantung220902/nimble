@@ -1,52 +1,55 @@
+import { ResendVerificationHandler } from '@modules/authentication/application';
 import { ResendVerificationCommand } from '@modules/authentication/application/commands/resend-verification/resend-verification.command';
-import { ResendVerificationHandler } from '@modules/authentication/application/commands/resend-verification/resend-verification.handler';
-import { ResendVerificationRequestBody } from '@modules/authentication/application/commands/resend-verification/resend-verification.request-body';
 import { AuthenticationNotifyService } from '@modules/authentication/services';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { BadRequestException } from '@nestjs/common';
-import { Test } from '@nestjs/testing';
+import { Test, TestingModule } from '@nestjs/testing';
 import { UserStatus } from '@prisma/client';
-import { Cache } from 'cache-manager';
 
 describe('ResendVerificationHandler', () => {
   let handler: ResendVerificationHandler;
-  let cacheService: jest.MockedObject<Cache>;
-  let authNotifyService: jest.MockedObject<AuthenticationNotifyService>;
+  let moduleRef: TestingModule;
+
+  const mockCacheService = {
+    get: jest.fn(),
+  };
+  const mockAuthenticationNotifyService = {
+    sendVerificationCode: jest.fn(),
+  };
 
   beforeEach(async () => {
-    cacheService = {
-      get: jest.fn(),
-    } as jest.MockedObject<Cache>;
-
-    authNotifyService = {
-      sendVerificationCode: jest.fn(),
-    } as jest.MockedObject<AuthenticationNotifyService>;
-
-    const testModule = await Test.createTestingModule({
+    moduleRef = await Test.createTestingModule({
       providers: [
         ResendVerificationHandler,
         {
           provide: CACHE_MANAGER,
-          useValue: cacheService,
+          useValue: mockCacheService,
         },
         {
           provide: AuthenticationNotifyService,
-          useValue: authNotifyService,
+          useValue: mockAuthenticationNotifyService,
         },
       ],
     }).compile();
 
-    handler = testModule.get<ResendVerificationHandler>(
+    handler = moduleRef.get<ResendVerificationHandler>(
       ResendVerificationHandler,
     );
   });
 
+  afterEach(async () => {
+    jest.clearAllMocks();
+    await moduleRef.close();
+  });
+
+  it('Should be defined', () => {
+    expect(handler).toBeDefined();
+  });
+
   describe('execute', () => {
     const mockEmail = 'example@google.com';
-    const mockRequestBody: ResendVerificationRequestBody = {
-      email: 'example@google.com',
-    };
-    const mockCommand = new ResendVerificationCommand(mockRequestBody);
+    const mockCommand = new ResendVerificationCommand({
+      email: mockEmail,
+    });
 
     const mockCachedUser = {
       email: mockEmail,
@@ -55,53 +58,54 @@ describe('ResendVerificationHandler', () => {
       lastName: 'Nguyen',
       status: UserStatus.UNVERIFIED,
     };
-
-    it('should successfully resend verification code', async () => {
-      cacheService.get.mockResolvedValue(mockCachedUser);
-      authNotifyService.sendVerificationCode.mockResolvedValue(undefined);
+    it('Should resend verification code successfully', async () => {
+      mockCacheService.get.mockResolvedValueOnce(mockCachedUser);
 
       await handler.execute(mockCommand);
 
-      expect(cacheService.get).toHaveBeenCalledWith(mockEmail);
-      expect(authNotifyService.sendVerificationCode).toHaveBeenCalledWith(
-        mockCachedUser,
-      );
+      expect(mockCacheService.get).toHaveBeenCalledTimes(1);
+      expect(mockCacheService.get).toHaveBeenCalledWith(mockEmail);
+
+      expect(
+        mockAuthenticationNotifyService.sendVerificationCode,
+      ).toHaveBeenCalledTimes(1);
+      expect(
+        mockAuthenticationNotifyService.sendVerificationCode,
+      ).toHaveBeenCalledWith(mockCachedUser);
     });
 
-    it('should throw BadRequestException if user is not found in cache', async () => {
-      cacheService.get.mockResolvedValue(null);
+    it('Should should BadRequestException if user does not exist in cache', async () => {
+      mockCacheService.get.mockResolvedValueOnce(null);
+      await expect(handler.execute(mockCommand)).rejects.toThrow(
+        'The user already expired! Please sign up again!',
+      );
+      expect(
+        mockAuthenticationNotifyService.sendVerificationCode,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('Should throw error if cache service failed', async () => {
+      mockCacheService.get.mockRejectedValueOnce(new Error('Something wrong!'));
 
       await expect(handler.execute(mockCommand)).rejects.toThrow(
-        new BadRequestException(
-          'The user already expired! Please sign up again!',
-        ),
+        'Something wrong!',
       );
-
-      expect(cacheService.get).toHaveBeenCalledWith(mockEmail);
-      expect(authNotifyService.sendVerificationCode).not.toHaveBeenCalled();
+      expect(
+        mockAuthenticationNotifyService.sendVerificationCode,
+      ).not.toHaveBeenCalled();
     });
 
-    it('should handle notify service errors', async () => {
-      const error = new Error('Notification service error');
-      cacheService.get.mockResolvedValue(mockCachedUser);
-      authNotifyService.sendVerificationCode.mockRejectedValue(error);
-
-      await expect(handler.execute(mockCommand)).rejects.toThrow(error);
-
-      expect(cacheService.get).toHaveBeenCalledWith(mockEmail);
-      expect(authNotifyService.sendVerificationCode).toHaveBeenCalledWith(
-        mockCachedUser,
+    it('Should throw error if cache service failed', async () => {
+      mockCacheService.get.mockResolvedValueOnce(mockCachedUser);
+      mockAuthenticationNotifyService.sendVerificationCode.mockRejectedValueOnce(
+        new Error('Something wrong!'),
       );
-    });
 
-    it('should handle cache service errors', async () => {
-      const error = new Error('Somethings wrong!');
-      cacheService.get.mockRejectedValue(error);
-
-      await expect(handler.execute(mockCommand)).rejects.toThrow(error);
-
-      expect(cacheService.get).toHaveBeenCalledWith(mockEmail);
-      expect(authNotifyService.sendVerificationCode).not.toHaveBeenCalled();
+      await expect(handler.execute(mockCommand)).rejects.toThrow(
+        'Something wrong!',
+      );
+      expect(mockCacheService.get).toHaveBeenCalledTimes(1);
+      expect(mockCacheService.get).toHaveBeenCalledWith(mockEmail);
     });
   });
 });

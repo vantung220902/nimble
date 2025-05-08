@@ -1,133 +1,204 @@
+import { EXPIRATION_VERIFICATION_ACCOUNT_SECONDS } from '@modules/authentication';
+import { SignUpHandler } from '@modules/authentication/application';
 import { SignUpCommand } from '@modules/authentication/application/commands/sign-up/sign-up.command';
-import { SignUpHandler } from '@modules/authentication/application/commands/sign-up/sign-up.handler';
-import { SignUpRequestBody } from '@modules/authentication/application/commands/sign-up/sign-up.request-body';
-import { EXPIRATION_VERIFICATION_ACCOUNT_SECONDS } from '@modules/authentication/authentication.enum';
 import {
   AuthenticationNotifyService,
   AuthenticationService,
 } from '@modules/authentication/services';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { BadRequestException } from '@nestjs/common';
-import { Test } from '@nestjs/testing';
+import { Test, TestingModule } from '@nestjs/testing';
 import { UserStatus } from '@prisma/client';
-import { Cache } from 'cache-manager';
 
 describe('SignUpHandler', () => {
   let handler: SignUpHandler;
-  let authService: jest.MockedObject<AuthenticationService>;
-  let cacheService: jest.MockedObject<Cache>;
-  let authNotifyService: jest.MockedObject<AuthenticationNotifyService>;
+  let moduleRef: TestingModule;
+
+  const mockAuthService = {
+    isEmailExisted: jest.fn(),
+    generateHashPassword: jest.fn(),
+  };
+  const mockCacheService = {
+    set: jest.fn(),
+  };
+  const mockAuthNotifyService = {
+    sendVerificationCode: jest.fn(),
+  };
 
   beforeEach(async () => {
-    authService = {
-      isEmailExisted: jest.fn(),
-      generateHashPassword: jest.fn(),
-    } as jest.MockedObject<AuthenticationService>;
-
-    cacheService = {
-      set: jest.fn(),
-    } as jest.MockedObject<Cache>;
-
-    authNotifyService = {
-      sendVerificationCode: jest.fn(),
-    } as jest.MockedObject<AuthenticationNotifyService>;
-
-    const testModule = await Test.createTestingModule({
+    moduleRef = await Test.createTestingModule({
       providers: [
         SignUpHandler,
         {
           provide: AuthenticationService,
-          useValue: authService,
+          useValue: mockAuthService,
         },
         {
           provide: CACHE_MANAGER,
-          useValue: cacheService,
+          useValue: mockCacheService,
         },
         {
           provide: AuthenticationNotifyService,
-          useValue: authNotifyService,
+          useValue: mockAuthNotifyService,
         },
       ],
     }).compile();
 
-    handler = testModule.get<SignUpHandler>(SignUpHandler);
+    handler = moduleRef.get(SignUpHandler);
+  });
+
+  afterEach(async () => {
+    jest.clearAllMocks();
+    await moduleRef.close();
+  });
+
+  it('Should be defined', () => {
+    expect(handler).toBeDefined();
   });
 
   describe('execute', () => {
-    const mockEmail = 'example@google.com';
-    const mockPassword = 'password';
-    const mockRequestBody: SignUpRequestBody = {
-      email: mockEmail,
-      password: mockPassword,
+    const mockCommand = new SignUpCommand({
+      confirmPassword: 'Abcd@123456',
+      password: 'Abcd@123456',
+      email: 'test@gmail.com',
       firstName: 'Tung',
       lastName: 'Nguyen',
-      confirmPassword: mockPassword,
-    };
-    const mockHashedPassword = 'hashedPassword';
-    const mockCommand = new SignUpCommand(mockRequestBody);
+    });
 
-    it('should successfully sign up user', async () => {
-      authService.isEmailExisted.mockResolvedValue(false);
-      authService.generateHashPassword.mockResolvedValue(mockHashedPassword);
-      cacheService.set.mockResolvedValue(undefined);
-      authNotifyService.sendVerificationCode.mockResolvedValue(undefined);
+    it('Should sign up successfully', async () => {
+      mockAuthService.isEmailExisted.mockResolvedValueOnce(false);
+      mockAuthService.generateHashPassword.mockResolvedValueOnce(
+        'hashedPassword',
+      );
 
       await handler.execute(mockCommand);
 
-      expect(authService.isEmailExisted).toHaveBeenCalledWith(mockEmail);
-      expect(authService.generateHashPassword).toHaveBeenCalledWith(
-        mockPassword,
+      expect(mockAuthService.isEmailExisted).toHaveBeenCalledTimes(1);
+      expect(mockAuthService.isEmailExisted).toHaveBeenCalledWith(
+        mockCommand.body.email,
       );
-      const mockCachedUser = {
-        email: mockEmail,
-        hashedPassword: mockHashedPassword,
-        firstName: mockRequestBody.firstName,
-        lastName: mockRequestBody.lastName,
-        status: UserStatus.UNVERIFIED,
-      };
-
-      expect(cacheService.set).toHaveBeenCalledWith(
-        mockEmail,
-        mockCachedUser,
+      expect(mockAuthService.generateHashPassword).toHaveBeenCalledTimes(1);
+      expect(mockAuthService.generateHashPassword).toHaveBeenCalledWith(
+        mockCommand.body.password,
+      );
+      expect(mockCacheService.set).toHaveBeenCalledTimes(1);
+      expect(mockCacheService.set).toHaveBeenCalledWith(
+        mockCommand.body.email,
+        {
+          email: mockCommand.body.email,
+          hashedPassword: 'hashedPassword',
+          firstName: mockCommand.body.firstName,
+          lastName: mockCommand.body.lastName,
+          status: UserStatus.UNVERIFIED,
+        },
         EXPIRATION_VERIFICATION_ACCOUNT_SECONDS,
       );
-      expect(authNotifyService.sendVerificationCode).toHaveBeenCalledWith(
-        mockCachedUser,
+      expect(mockAuthNotifyService.sendVerificationCode).toHaveBeenCalledTimes(
+        1,
       );
+      expect(mockAuthNotifyService.sendVerificationCode).toHaveBeenCalledWith({
+        email: mockCommand.body.email,
+        hashedPassword: 'hashedPassword',
+        firstName: mockCommand.body.firstName,
+        lastName: mockCommand.body.lastName,
+        status: UserStatus.UNVERIFIED,
+      });
     });
 
-    it('should throw BadRequestException if email already exists', async () => {
-      authService.isEmailExisted.mockResolvedValue(true);
+    it('Should throw BadRequestException if email already existed', async () => {
+      mockAuthService.isEmailExisted.mockResolvedValueOnce(true);
 
       await expect(handler.execute(mockCommand)).rejects.toThrow(
         new BadRequestException('This email already exists in the system!'),
       );
-
-      expect(authService.generateHashPassword).not.toHaveBeenCalled();
-      expect(cacheService.set).not.toHaveBeenCalled();
-      expect(authNotifyService.sendVerificationCode).not.toHaveBeenCalled();
+      expect(mockAuthService.generateHashPassword).not.toHaveBeenCalled();
+      expect(mockCacheService.set).not.toHaveBeenCalled();
+      expect(mockAuthNotifyService.sendVerificationCode).not.toHaveBeenCalled();
     });
 
-    it('should handle password hashing error', async () => {
-      const error = new Error('Somethings wrong');
-      authService.isEmailExisted.mockResolvedValue(false);
-      authService.generateHashPassword.mockRejectedValue(error);
+    it('Should throw error if isEmailExisted failed', async () => {
+      mockAuthService.isEmailExisted.mockRejectedValueOnce(
+        new Error('Something Wrong!'),
+      );
 
-      await expect(handler.execute(mockCommand)).rejects.toThrow(error);
-
-      expect(cacheService.set).not.toHaveBeenCalled();
-      expect(authNotifyService.sendVerificationCode).not.toHaveBeenCalled();
+      await expect(handler.execute(mockCommand)).rejects.toThrow(
+        new Error('Something Wrong!'),
+      );
+      expect(mockAuthService.generateHashPassword).not.toHaveBeenCalled();
+      expect(mockCacheService.set).not.toHaveBeenCalled();
+      expect(mockAuthNotifyService.sendVerificationCode).not.toHaveBeenCalled();
     });
 
-    it('should handle cache service error', async () => {
-      const error = new Error('Somethings wrong');
-      authService.isEmailExisted.mockResolvedValue(false);
-      authService.generateHashPassword.mockResolvedValue(mockHashedPassword);
-      cacheService.set.mockRejectedValue(error);
+    it('Should throw error if generateHashPassword failed', async () => {
+      mockAuthService.isEmailExisted.mockResolvedValueOnce(false);
+      mockAuthService.generateHashPassword.mockRejectedValueOnce(
+        new Error('Something Wrong!'),
+      );
 
-      await expect(handler.execute(mockCommand)).rejects.toThrow(error);
+      await expect(handler.execute(mockCommand)).rejects.toThrow(
+        new Error('Something Wrong!'),
+      );
+      expect(mockAuthService.isEmailExisted).toHaveBeenCalledTimes(1);
+      expect(mockAuthService.isEmailExisted).toHaveBeenCalledWith(
+        mockCommand.body.email,
+      );
+      expect(mockCacheService.set).not.toHaveBeenCalled();
+      expect(mockAuthNotifyService.sendVerificationCode).not.toHaveBeenCalled();
+    });
 
-      expect(authNotifyService.sendVerificationCode).not.toHaveBeenCalled();
+    it('Should throw error if cache set failed', async () => {
+      mockAuthService.isEmailExisted.mockResolvedValueOnce(false);
+      mockAuthService.generateHashPassword.mockResolvedValueOnce(
+        'hashedPassword',
+      );
+      mockCacheService.set.mockRejectedValueOnce(new Error('Something Wrong!'));
+
+      await expect(handler.execute(mockCommand)).rejects.toThrow(
+        new Error('Something Wrong!'),
+      );
+      expect(mockAuthService.isEmailExisted).toHaveBeenCalledTimes(1);
+      expect(mockAuthService.isEmailExisted).toHaveBeenCalledWith(
+        mockCommand.body.email,
+      );
+      expect(mockAuthService.generateHashPassword).toHaveBeenCalledTimes(1);
+      expect(mockAuthService.generateHashPassword).toHaveBeenCalledWith(
+        mockCommand.body.password,
+      );
+      expect(mockAuthNotifyService.sendVerificationCode).not.toHaveBeenCalled();
+    });
+
+    it('Should throw error if sendVerificationCode failed', async () => {
+      mockAuthService.isEmailExisted.mockResolvedValueOnce(false);
+      mockAuthService.generateHashPassword.mockResolvedValueOnce(
+        'hashedPassword',
+      );
+      mockAuthNotifyService.sendVerificationCode.mockRejectedValueOnce(
+        new Error('Something Wrong!'),
+      );
+
+      await expect(handler.execute(mockCommand)).rejects.toThrow(
+        new Error('Something Wrong!'),
+      );
+      expect(mockAuthService.isEmailExisted).toHaveBeenCalledTimes(1);
+      expect(mockAuthService.isEmailExisted).toHaveBeenCalledWith(
+        mockCommand.body.email,
+      );
+      expect(mockAuthService.generateHashPassword).toHaveBeenCalledTimes(1);
+      expect(mockAuthService.generateHashPassword).toHaveBeenCalledWith(
+        mockCommand.body.password,
+      );
+      expect(mockCacheService.set).toHaveBeenCalledTimes(1);
+      expect(mockCacheService.set).toHaveBeenCalledWith(
+        mockCommand.body.email,
+        {
+          email: mockCommand.body.email,
+          hashedPassword: 'hashedPassword',
+          firstName: mockCommand.body.firstName,
+          lastName: mockCommand.body.lastName,
+          status: UserStatus.UNVERIFIED,
+        },
+        EXPIRATION_VERIFICATION_ACCOUNT_SECONDS,
+      );
     });
   });
 });

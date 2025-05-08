@@ -1,65 +1,65 @@
 import { PrismaService } from '@database';
+import { EXPIRATION_REFRESH_TOKEN_SECONDS } from '@modules/authentication';
+import { SignInHandler } from '@modules/authentication/application';
 import { SignInCommand } from '@modules/authentication/application/commands/sign-in/sign-in.command';
-import { SignInHandler } from '@modules/authentication/application/commands/sign-in/sign-in.handler';
-import { EXPIRATION_REFRESH_TOKEN_SECONDS } from '@modules/authentication/authentication.enum';
 import { AuthenticationService } from '@modules/authentication/services';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { BadRequestException } from '@nestjs/common';
-import { Test } from '@nestjs/testing';
+import { Test, TestingModule } from '@nestjs/testing';
 import { UserStatus } from '@prisma/client';
-import { Cache } from 'cache-manager';
 
 describe('SignInHandler', () => {
   let handler: SignInHandler;
-  let prismaService: jest.MockedObject<PrismaService>;
-  let authService: jest.MockedObject<AuthenticationService>;
-  let cacheService: jest.MockedObject<Cache>;
+  let moduleRef: TestingModule;
+
+  const mockPrismaService = {
+    user: {
+      findUnique: jest.fn(),
+    },
+  };
+  const mockCacheService = {
+    set: jest.fn(),
+  };
+  const mockAuthService = {
+    generateToken: jest.fn(),
+    getRefreshTokenCacheKey: jest.fn(),
+    isValidPassword: jest.fn(),
+  };
 
   beforeEach(async () => {
-    prismaService = {
-      user: {
-        findUnique: jest.fn(),
-      },
-    } as any as jest.MockedObject<PrismaService>;
-
-    authService = {
-      isValidPassword: jest.fn(),
-      generateToken: jest.fn(),
-      getRefreshTokenCacheKey: jest.fn(),
-    } as jest.MockedObject<AuthenticationService>;
-
-    cacheService = {
-      set: jest.fn(),
-    } as jest.MockedObject<Cache>;
-
-    const testModule = await Test.createTestingModule({
+    moduleRef = await Test.createTestingModule({
       providers: [
         SignInHandler,
         {
           provide: PrismaService,
-          useValue: prismaService,
+          useValue: mockPrismaService,
         },
         {
           provide: AuthenticationService,
-          useValue: authService,
+          useValue: mockAuthService,
         },
         {
           provide: CACHE_MANAGER,
-          useValue: cacheService,
+          useValue: mockCacheService,
         },
       ],
     }).compile();
 
-    handler = testModule.get<SignInHandler>(SignInHandler);
+    handler = moduleRef.get<SignInHandler>(SignInHandler);
   });
 
-  it('should be defined', () => {
+  afterEach(async () => {
+    jest.clearAllMocks();
+    await moduleRef.close();
+  });
+
+  it('Should be defined', () => {
     expect(handler).toBeDefined();
   });
 
   describe('execute', () => {
     const mockCommand = new SignInCommand({
-      email: 'example@gmail.com',
+      email: 'example@google.com',
       password: 'password',
     });
     const mockUser = {
@@ -69,22 +69,28 @@ describe('SignInHandler', () => {
       status: UserStatus.ACTIVE,
     };
 
-    it('should successfully sign in user and return access token', async () => {
-      (prismaService.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
-      authService.isValidPassword.mockResolvedValue(true);
-      authService.generateToken.mockResolvedValue({
-        accessToken: 'accessToken',
-        refreshToken: 'refreshToken',
+    it('Should sign in successfully', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValueOnce(mockUser);
+      mockAuthService.isValidPassword.mockResolvedValueOnce(true);
+      mockAuthService.generateToken.mockResolvedValueOnce({
+        accessToken: 'access-token',
+        refreshToken: 'refresh-token',
       });
-      authService.getRefreshTokenCacheKey.mockReturnValue(
+      mockAuthService.getRefreshTokenCacheKey.mockReturnValueOnce(
         `refreshToken:${mockUser.email}`,
       );
 
-      const commandResponse = await handler.execute(mockCommand);
+      const response = await handler.execute(mockCommand);
 
-      expect(commandResponse).toEqual({ accessToken: 'accessToken' });
-      expect(prismaService.user.findUnique).toHaveBeenCalledWith({
-        where: { email: mockCommand.body.email },
+      expect(response).toBeDefined();
+      expect(response).toEqual({
+        accessToken: 'access-token',
+      });
+      expect(mockPrismaService.user.findUnique).toHaveBeenCalledTimes(1);
+      expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
+        where: {
+          email: mockCommand.body.email,
+        },
         select: {
           email: true,
           id: true,
@@ -92,55 +98,97 @@ describe('SignInHandler', () => {
           status: true,
         },
       });
-      expect(authService.isValidPassword).toHaveBeenCalledWith(
+      expect(mockAuthService.isValidPassword).toHaveBeenCalledTimes(1);
+      expect(mockAuthService.isValidPassword).toHaveBeenCalledWith(
         mockCommand.body.password,
         mockUser.hashedPassword,
       );
-      expect(authService.generateToken).toHaveBeenCalledWith({
+      expect(mockAuthService.generateToken).toHaveBeenCalledTimes(1);
+      expect(mockAuthService.generateToken).toHaveBeenCalledWith({
         email: mockUser.email,
         id: mockUser.id,
         status: mockUser.status,
       });
-      expect(cacheService.set).toHaveBeenCalledWith(
+      expect(mockAuthService.getRefreshTokenCacheKey).toHaveBeenCalledTimes(1);
+      expect(mockAuthService.getRefreshTokenCacheKey).toHaveBeenCalledWith(
+        mockUser.email,
+      );
+      expect(mockCacheService.set).toHaveBeenCalledTimes(1);
+      expect(mockCacheService.set).toHaveBeenCalledWith(
         `refreshToken:${mockUser.email}`,
-        'refreshToken',
+        'refresh-token',
         EXPIRATION_REFRESH_TOKEN_SECONDS,
       );
     });
 
-    it('should throw BadRequestException if user does not exist', async () => {
-      (prismaService.user.findUnique as jest.Mock).mockResolvedValue(null);
+    it('Should throw BadRequestException when user does not exist', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValueOnce(null);
 
       await expect(handler.execute(mockCommand)).rejects.toThrow(
         new BadRequestException('This account does not exist in the system!'),
       );
+      expect(mockAuthService.isValidPassword).not.toHaveBeenCalled();
+      expect(mockAuthService.generateToken).not.toHaveBeenCalled();
+      expect(mockAuthService.getRefreshTokenCacheKey).not.toHaveBeenCalled();
+      expect(mockCacheService.set).not.toHaveBeenCalled();
     });
 
-    it('should throw BadRequestException if password is incorrect', async () => {
-      (prismaService.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
-      authService.isValidPassword.mockResolvedValue(false);
+    it('Should throw BadRequestException if password is incorrect', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValueOnce(mockUser);
+      mockAuthService.isValidPassword.mockResolvedValueOnce(false);
 
       await expect(handler.execute(mockCommand)).rejects.toThrow(
         new BadRequestException(
           'Email or password is incorrect. Please try sign in again.',
         ),
       );
+      expect(mockAuthService.generateToken).not.toHaveBeenCalled();
+      expect(mockAuthService.getRefreshTokenCacheKey).not.toHaveBeenCalled();
+      expect(mockCacheService.set).not.toHaveBeenCalled();
     });
 
-    it('should handle cache service errors', async () => {
-      (prismaService.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
-      authService.isValidPassword.mockResolvedValue(true);
-      authService.generateToken.mockResolvedValue({
-        accessToken: 'accessToken',
-        refreshToken: 'refreshToken',
-      });
-      authService.getRefreshTokenCacheKey.mockReturnValue(
-        `refreshToken:${mockUser.email}`,
+    it('Should throw error if database failed', async () => {
+      mockPrismaService.user.findUnique.mockRejectedValueOnce(
+        new Error('Something wrong!'),
       );
-      cacheService.set.mockRejectedValue(new Error('Somethings wrong'));
 
       await expect(handler.execute(mockCommand)).rejects.toThrow(
-        'Somethings wrong',
+        'Something wrong!',
+      );
+      expect(mockAuthService.isValidPassword).not.toHaveBeenCalled();
+      expect(mockAuthService.generateToken).not.toHaveBeenCalled();
+      expect(mockAuthService.getRefreshTokenCacheKey).not.toHaveBeenCalled();
+      expect(mockCacheService.set).not.toHaveBeenCalled();
+    });
+
+    it('Should throw error if authentication service failed', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValueOnce(mockUser);
+      mockAuthService.isValidPassword.mockRejectedValueOnce(
+        new Error('Something wrong!'),
+      );
+
+      await expect(handler.execute(mockCommand)).rejects.toThrow(
+        'Something wrong!',
+      );
+      expect(mockAuthService.generateToken).not.toHaveBeenCalled();
+      expect(mockAuthService.getRefreshTokenCacheKey).not.toHaveBeenCalled();
+      expect(mockCacheService.set).not.toHaveBeenCalled();
+    });
+
+    it('Should throw error if cache service failed', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValueOnce(mockUser);
+      mockAuthService.isValidPassword.mockResolvedValueOnce(true);
+      mockAuthService.generateToken.mockResolvedValueOnce({
+        accessToken: 'access-token',
+        refreshToken: 'refresh-token',
+      });
+      mockAuthService.getRefreshTokenCacheKey.mockReturnValueOnce(
+        `refreshToken:${mockUser.email}`,
+      );
+      mockCacheService.set.mockRejectedValueOnce(new Error('Something wrong!'));
+
+      await expect(handler.execute(mockCommand)).rejects.toThrow(
+        'Something wrong!',
       );
     });
   });

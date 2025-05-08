@@ -1,87 +1,93 @@
 import { PrismaService } from '@database';
+import { VerifyUserHandler } from '@modules/authentication/application';
 import { VerifyUserCommand } from '@modules/authentication/application/commands/verify-user/verify-user.command';
-import { VerifyUserHandler } from '@modules/authentication/application/commands/verify-user/verify-user.handler';
 import { AuthenticationService } from '@modules/authentication/services';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { BadRequestException } from '@nestjs/common';
-import { Test } from '@nestjs/testing';
+import { Test, TestingModule } from '@nestjs/testing';
 import { UserStatus } from '@prisma/client';
-import { Cache } from 'cache-manager';
 
 describe('VerifyUserHandler', () => {
   let handler: VerifyUserHandler;
-  let cacheService: jest.MockedObject<Cache>;
-  let prismaService: jest.MockedObject<PrismaService>;
-  let authService: jest.MockedObject<AuthenticationService>;
+  let moduleRef: TestingModule;
+
+  const mockCacheService = {
+    get: jest.fn(),
+    del: jest.fn(),
+  };
+  const mockPrismaService = {
+    user: {
+      create: jest.fn(),
+    },
+  };
+  const mockAuthService = {
+    getVerificationCacheKey: jest.fn(),
+  };
 
   beforeEach(async () => {
-    cacheService = {
-      get: jest.fn(),
-      del: jest.fn(),
-    } as jest.MockedObject<Cache>;
-
-    prismaService = {
-      user: {
-        create: jest.fn(),
-      },
-    } as any as jest.MockedObject<PrismaService>;
-
-    authService = {
-      getVerificationCacheKey: jest.fn(),
-    } as jest.MockedObject<AuthenticationService>;
-
-    const testModule = await Test.createTestingModule({
+    moduleRef = await Test.createTestingModule({
       providers: [
         VerifyUserHandler,
         {
           provide: CACHE_MANAGER,
-          useValue: cacheService,
-        },
-        {
-          provide: PrismaService,
-          useValue: prismaService,
+          useValue: mockCacheService,
         },
         {
           provide: AuthenticationService,
-          useValue: authService,
+          useValue: mockAuthService,
+        },
+        {
+          provide: PrismaService,
+          useValue: mockPrismaService,
         },
       ],
     }).compile();
 
-    handler = testModule.get<VerifyUserHandler>(VerifyUserHandler);
+    handler = moduleRef.get(VerifyUserHandler);
+  });
+
+  afterEach(async () => {
+    jest.clearAllMocks();
+    await moduleRef.close();
+  });
+
+  it('Should handler be defined', () => {
+    expect(handler).toBeDefined();
   });
 
   describe('execute', () => {
-    const mockEmail = 'example@google.com';
-    const mockCode = '123456';
-    const mockRequestBody = { email: mockEmail, code: mockCode };
-    const mockCommand = new VerifyUserCommand(mockRequestBody);
-
-    const mockVerificationKey = `verification:${mockEmail}`;
+    const mockCommand = new VerifyUserCommand({
+      email: 'test@gmail.com',
+      code: '123456',
+    });
     const mockCachedUser = {
-      email: mockEmail,
       hashedPassword: 'hashedPassword',
+      email: 'test@gmail.com',
       firstName: 'Tung',
       lastName: 'Nguyen',
-      status: UserStatus.UNVERIFIED,
     };
 
-    it('should successfully verify user', async () => {
-      authService.getVerificationCacheKey.mockReturnValue(mockVerificationKey);
-      cacheService.get.mockImplementation((key) => {
-        if (key === mockVerificationKey) return Promise.resolve(mockCode);
-        if (key === mockEmail) return Promise.resolve(mockCachedUser);
-        return Promise.resolve(null);
-      });
+    it('Should verify user successfully', async () => {
+      mockAuthService.getVerificationCacheKey.mockReturnValueOnce(
+        `verification:${mockCommand.body.email}`,
+      );
+      mockCacheService.get
+        .mockResolvedValueOnce(mockCommand.body.code)
+        .mockResolvedValueOnce(mockCachedUser);
 
       await handler.execute(mockCommand);
 
-      expect(authService.getVerificationCacheKey).toHaveBeenCalledWith(
-        mockEmail,
+      expect(mockAuthService.getVerificationCacheKey).toHaveBeenCalledTimes(1);
+      expect(mockAuthService.getVerificationCacheKey).toHaveBeenCalledWith(
+        mockCommand.body.email,
       );
-      expect(cacheService.get).toHaveBeenCalledWith(mockVerificationKey);
-      expect(cacheService.get).toHaveBeenCalledWith(mockEmail);
-      expect(prismaService.user.create).toHaveBeenCalledWith({
+      expect(mockCacheService.get).toHaveBeenCalledTimes(2);
+      expect(mockCacheService.get).toHaveBeenCalledWith(
+        `verification:${mockCommand.body.email}`,
+      );
+      expect(mockCacheService.get).toHaveBeenCalledWith(mockCommand.body.email);
+      expect(mockPrismaService.user.create).toHaveBeenCalledTimes(1);
+      expect(mockPrismaService.user.create).toHaveBeenCalledWith({
         data: {
           email: mockCachedUser.email,
           firstName: mockCachedUser.firstName,
@@ -91,48 +97,82 @@ describe('VerifyUserHandler', () => {
           emailVerified: expect.any(Date),
         },
       });
-      expect(cacheService.del).toHaveBeenCalledWith(mockVerificationKey);
-      expect(cacheService.del).toHaveBeenCalledWith(mockEmail);
+      expect(mockCacheService.del).toHaveBeenCalledTimes(2);
+      expect(mockCacheService.del).toHaveBeenCalledWith(
+        `verification:${mockCommand.body.email}`,
+      );
+      expect(mockCacheService.del).toHaveBeenCalledWith(mockCommand.body.email);
     });
 
-    it('should throw BadRequestException if verification code is invalid', async () => {
-      authService.getVerificationCacheKey.mockReturnValue(mockVerificationKey);
-      cacheService.get.mockImplementation((key) => {
-        if (key === mockVerificationKey) return Promise.resolve('invalidCode');
-        return Promise.resolve(null);
-      });
+    it('Should throw BadRequestException error if code does not match with cached code', async () => {
+      mockAuthService.getVerificationCacheKey.mockReturnValueOnce(
+        `verification:${mockCommand.body.email}`,
+      );
+      mockCacheService.get.mockResolvedValueOnce('123123');
 
       await expect(handler.execute(mockCommand)).rejects.toThrow(
         new BadRequestException('The verification code is invalid!'),
       );
+
+      expect(mockCacheService.get).not.toHaveBeenCalledWith(
+        mockCommand.body.email,
+      );
+      expect(mockPrismaService.user.create).not.toHaveBeenCalled();
+      expect(mockCacheService.del).not.toHaveBeenCalled();
     });
 
-    it('should throw BadRequestException if user is not found in cache', async () => {
-      authService.getVerificationCacheKey.mockReturnValue(mockVerificationKey);
-      cacheService.get.mockImplementation((key) => {
-        if (key === mockVerificationKey) return Promise.resolve(mockCode);
-        return Promise.resolve(null);
-      });
+    it('Should throw BadRequestException if user does not exist in cache', async () => {
+      mockAuthService.getVerificationCacheKey.mockReturnValueOnce(
+        `verification:${mockCommand.body.email}`,
+      );
+      mockCacheService.get
+        .mockResolvedValueOnce(mockCommand.body.code)
+        .mockResolvedValueOnce(null);
 
       await expect(handler.execute(mockCommand)).rejects.toThrow(
         new BadRequestException(
           'The user already expired! Please sign up again!',
         ),
       );
+
+      expect(mockPrismaService.user.create).not.toHaveBeenCalled();
+      expect(mockCacheService.del).not.toHaveBeenCalled();
     });
 
-    it('should handle database errors', async () => {
-      const error = new Error('Somethings wrong');
-      authService.getVerificationCacheKey.mockReturnValue(mockVerificationKey);
-      cacheService.get.mockImplementation((key) => {
-        if (key === mockVerificationKey) return Promise.resolve(mockCode);
-        if (key === mockEmail) return Promise.resolve(mockCachedUser);
-        return Promise.resolve(null);
-      });
+    it('Should throw error if cache service failed', async () => {
+      mockAuthService.getVerificationCacheKey.mockReturnValueOnce(
+        `verification:${mockCommand.body.email}`,
+      );
+      mockCacheService.get.mockRejectedValueOnce(new Error('Something Wrong!'));
 
-      (prismaService.user.create as jest.Mock).mockRejectedValue(error);
+      await expect(handler.execute(mockCommand)).rejects.toThrow(
+        new Error('Something Wrong!'),
+      );
 
-      await expect(handler.execute(mockCommand)).rejects.toThrow(error);
+      expect(mockCacheService.get).not.toHaveBeenCalledWith(
+        mockCommand.body.email,
+      );
+      expect(mockPrismaService.user.create).not.toHaveBeenCalled();
+      expect(mockCacheService.del).not.toHaveBeenCalled();
+    });
+
+    it('Should throw error if prisma service failed', async () => {
+      mockAuthService.getVerificationCacheKey.mockReturnValueOnce(
+        `verification:${mockCommand.body.email}`,
+      );
+      mockAuthService.getVerificationCacheKey.mockReturnValueOnce(
+        `verification:${mockCommand.body.email}`,
+      );
+      mockCacheService.get
+        .mockResolvedValueOnce(mockCommand.body.code)
+        .mockResolvedValueOnce(mockCachedUser);
+      mockPrismaService.user.create.mockRejectedValueOnce(
+        new Error('Something Wrong!'),
+      );
+
+      await expect(handler.execute(mockCommand)).rejects.toThrow(
+        new Error('Something Wrong!'),
+      );
     });
   });
 });

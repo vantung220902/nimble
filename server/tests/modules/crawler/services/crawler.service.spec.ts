@@ -6,16 +6,15 @@ import {
   CrawlerService,
   PageManagementService,
 } from '@modules/crawler/services';
+import { InternalServerErrorException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { Page } from 'puppeteer';
 
 describe('CrawlerService', () => {
   let service: CrawlerService;
   let contentParserService: ContentParserService;
-  let mockPageManagementService: jest.Mocked<PageManagementService>;
-  let mockCaptchaDetectionService: jest.Mocked<CaptchaDetectionService>;
-  let mockAppConfig: Partial<AppConfig>;
-  let mockPage: jest.Mocked<Page>;
+  let moduleRef: TestingModule;
+
   const mockLinks = ['http://localhost:4000', 'http://localhost:4001'];
   const mockContent = `
         <html>
@@ -34,31 +33,27 @@ describe('CrawlerService', () => {
           </body>
         </html>
       `;
+  const mockPage = {
+    close: jest.fn(),
+  } as unknown as jest.Mocked<Page>;
+  const mockPageManagementService = {
+    launchNewPage: jest.fn().mockResolvedValue(mockPage),
+    configPage: jest.fn(),
+    navigateToLink: jest.fn(),
+    waitForSelector: jest.fn(),
+    getPageContent: jest.fn().mockResolvedValue(mockContent),
+    closePage: jest.fn(),
+  };
+  const mockAppConfig = {
+    isProduction: false,
+  };
+  const mockCaptchaDetectionService = {
+    detect: jest.fn().mockResolvedValue(false),
+    resolve: jest.fn(),
+  };
 
   beforeEach(async () => {
-    mockPage = {
-      close: jest.fn().mockResolvedValue(undefined),
-    } as unknown as jest.Mocked<Page>;
-
-    mockPageManagementService = {
-      launchNewPage: jest.fn().mockResolvedValue(mockPage),
-      configPage: jest.fn().mockResolvedValue(undefined),
-      navigateToLink: jest.fn().mockResolvedValue(undefined),
-      waitForSelector: jest.fn().mockResolvedValue(undefined),
-      getPageContent: jest.fn().mockResolvedValue(mockContent),
-      closePage: jest.fn().mockResolvedValue(undefined),
-    } as unknown as jest.Mocked<PageManagementService>;
-
-    mockCaptchaDetectionService = {
-      detect: jest.fn().mockResolvedValue(false),
-      resolve: jest.fn().mockResolvedValue(undefined),
-    } as unknown as jest.Mocked<CaptchaDetectionService>;
-
-    mockAppConfig = {
-      isProduction: false,
-    };
-
-    const testModule: TestingModule = await Test.createTestingModule({
+    moduleRef = await Test.createTestingModule({
       providers: [
         {
           provide: PageManagementService,
@@ -77,64 +72,144 @@ describe('CrawlerService', () => {
       ],
     }).compile();
 
-    service = testModule.get<CrawlerService>(CrawlerService);
-    contentParserService =
-      testModule.get<ContentParserService>(ContentParserService);
+    service = moduleRef.get(CrawlerService);
+    contentParserService = moduleRef.get(ContentParserService);
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     jest.clearAllMocks();
+    await moduleRef.close();
+  });
+
+  it('Should be defined', () => {
+    expect(service).toBeDefined();
+    expect(contentParserService).toBeDefined();
   });
 
   describe('crawlKeyword', () => {
     const keyword = 'Nimble';
 
-    it('should crawl keyword successfully', async () => {
+    let documentContent: Document;
+    let expectedAdCount: number;
+    let expectedLinkCount: number;
+
+    beforeEach(() => {
+      documentContent = contentParserService.getDocumentContent(mockContent);
+      expectedAdCount =
+        contentParserService.countAdsFromDocument(documentContent);
+      expectedLinkCount =
+        contentParserService.countLinksFromDocument(documentContent);
+    });
+
+    it('Should crawl keyword search content successfully', async () => {
       const crawledContent = await service.crawlKeyword(keyword);
-      const document = contentParserService.getDocumentContent(mockContent);
-      const expectedAds = contentParserService.countAdsFromDocument(document);
-      const expectedLinks =
-        contentParserService.countLinksFromDocument(document);
 
       expect(crawledContent).toEqual({
-        totalAds: expectedAds,
-        totalLinks: expectedLinks,
+        totalAds: expectedAdCount,
+        totalLinks: expectedLinkCount,
         content: mockContent,
         keyword,
       });
-
-      expect(mockPageManagementService.launchNewPage).toHaveBeenCalled();
+      expect(mockPageManagementService.launchNewPage).toHaveBeenCalledTimes(1);
+      expect(mockPageManagementService.configPage).toHaveBeenCalledTimes(1);
       expect(mockPageManagementService.configPage).toHaveBeenCalledWith(
         mockPage,
       );
+      expect(mockPageManagementService.navigateToLink).toHaveBeenCalledTimes(1);
       expect(mockPageManagementService.navigateToLink).toHaveBeenCalledWith(
         `${GoogleCrawlerOption.link}/search?q=${encodeURIComponent(keyword)}`,
         mockPage,
       );
-    });
-
-    it('should handle errors and close page', async () => {
-      const error = new Error('Navigation failed');
-      mockPageManagementService.navigateToLink.mockRejectedValueOnce(error);
-
-      const crawledContent = await service.crawlKeyword(keyword);
-
-      expect(crawledContent).toBeUndefined();
+      expect(mockCaptchaDetectionService.detect).toHaveBeenCalledTimes(1);
+      expect(mockCaptchaDetectionService.detect).toHaveBeenCalledWith(mockPage);
+      expect(mockPageManagementService.waitForSelector).toHaveBeenCalledTimes(
+        1,
+      );
+      expect(mockPageManagementService.waitForSelector).toHaveBeenCalledWith(
+        GoogleCrawlerOption.selector,
+        mockPage,
+      );
+      expect(mockPageManagementService.getPageContent).toHaveBeenCalledTimes(1);
+      expect(mockPageManagementService.getPageContent).toHaveBeenCalledWith(
+        mockPage,
+      );
+      expect(mockPageManagementService.closePage).toHaveBeenCalledTimes(1);
       expect(mockPageManagementService.closePage).toHaveBeenCalledWith(
         mockPage,
       );
     });
 
-    it('should parse content correctly', async () => {
-      const crawledContent = await service.crawlKeyword(keyword);
-      const document = contentParserService.getDocumentContent(mockContent);
+    it('Should handle crawling keyword if captcha detected on production', async () => {
+      mockAppConfig.isProduction = true;
+      mockCaptchaDetectionService.detect.mockResolvedValueOnce(true);
 
-      expect(crawledContent?.totalAds).toBe(
-        contentParserService.countAdsFromDocument(document),
+      const crawledContent = await service.crawlKeyword(keyword);
+
+      expect(crawledContent).toEqual({
+        totalAds: expectedAdCount,
+        totalLinks: expectedLinkCount,
+        content: mockContent,
+        keyword,
+      });
+      expect(mockPageManagementService.launchNewPage).toHaveBeenCalledTimes(1);
+      expect(mockPageManagementService.configPage).toHaveBeenCalledTimes(1);
+      expect(mockPageManagementService.configPage).toHaveBeenCalledWith(
+        mockPage,
       );
-      expect(crawledContent?.totalLinks).toBe(
-        contentParserService.countLinksFromDocument(document),
+      expect(mockPageManagementService.navigateToLink).toHaveBeenCalledTimes(1);
+      expect(mockPageManagementService.navigateToLink).toHaveBeenCalledWith(
+        `${GoogleCrawlerOption.link}/search?q=${encodeURIComponent(keyword)}`,
+        mockPage,
       );
+      expect(mockCaptchaDetectionService.detect).toHaveBeenCalledTimes(1);
+      expect(mockCaptchaDetectionService.detect).toHaveBeenCalledWith(mockPage);
+      expect(mockCaptchaDetectionService.resolve).toHaveBeenCalledTimes(1);
+      expect(mockCaptchaDetectionService.resolve).toHaveBeenCalledWith(
+        mockPage,
+      );
+      expect(mockPageManagementService.waitForSelector).toHaveBeenCalledTimes(
+        1,
+      );
+      expect(mockPageManagementService.waitForSelector).toHaveBeenCalledWith(
+        GoogleCrawlerOption.selector,
+        mockPage,
+      );
+      expect(mockPageManagementService.getPageContent).toHaveBeenCalledTimes(1);
+      expect(mockPageManagementService.getPageContent).toHaveBeenCalledWith(
+        mockPage,
+      );
+      expect(mockPageManagementService.closePage).toHaveBeenCalledTimes(1);
+      expect(mockPageManagementService.closePage).toHaveBeenCalledWith(
+        mockPage,
+      );
+    });
+
+    it('Should throw InternalServerErrorException if launchNewPage failed', async () => {
+      mockPageManagementService.launchNewPage.mockRejectedValueOnce(
+        new InternalServerErrorException('Somethings wrong!'),
+      );
+
+      await expect(service.crawlKeyword(keyword)).rejects.toThrow(
+        new InternalServerErrorException('Somethings wrong!'),
+      );
+      expect(mockPageManagementService.configPage).not.toHaveBeenCalled();
+      expect(mockPageManagementService.navigateToLink).not.toHaveBeenCalled();
+      expect(mockCaptchaDetectionService.detect).not.toHaveBeenCalled();
+      expect(mockPageManagementService.waitForSelector).not.toHaveBeenCalled();
+      expect(mockPageManagementService.getPageContent).not.toHaveBeenCalled();
+      expect(mockPageManagementService.closePage).not.toHaveBeenCalled();
+    });
+
+    it('Should handle error and close page', async () => {
+      mockPageManagementService.configPage.mockRejectedValueOnce(
+        new Error('Something Wrong!'),
+      );
+
+      await expect(service.crawlKeyword(keyword)).resolves.toBeUndefined();
+      expect(mockPageManagementService.navigateToLink).not.toHaveBeenCalled();
+      expect(mockCaptchaDetectionService.detect).not.toHaveBeenCalled();
+      expect(mockPageManagementService.waitForSelector).not.toHaveBeenCalled();
+      expect(mockPageManagementService.getPageContent).not.toHaveBeenCalled();
     });
   });
 });

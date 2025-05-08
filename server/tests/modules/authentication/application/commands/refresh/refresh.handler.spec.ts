@@ -1,42 +1,48 @@
+import { EXPIRATION_REFRESH_TOKEN_SECONDS } from '@modules/authentication';
+import { RefreshHandler } from '@modules/authentication/application';
 import { RefreshCommand } from '@modules/authentication/application/commands/refresh/refresh.command';
-import { RefreshHandler } from '@modules/authentication/application/commands/refresh/refresh.handler';
-import { EXPIRATION_REFRESH_TOKEN_SECONDS } from '@modules/authentication/authentication.enum';
 import { AuthenticationService } from '@modules/authentication/services';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Test } from '@nestjs/testing';
+import { Test, TestingModule } from '@nestjs/testing';
 import { UserStatus } from '@prisma/client';
-import { Cache } from 'cache-manager';
 
 describe('RefreshHandler', () => {
   let handler: RefreshHandler;
-  let authService: jest.MockedObject<AuthenticationService>;
-  let cacheService: jest.MockedObject<Cache>;
+  let moduleRef: TestingModule;
+
+  const mockAuthService = {
+    generateToken: jest.fn(),
+    getRefreshTokenCacheKey: jest.fn(),
+  };
+  const mockCacheService = {
+    set: jest.fn(),
+  };
 
   beforeEach(async () => {
-    authService = {
-      generateToken: jest.fn(),
-      getRefreshTokenCacheKey: jest.fn(),
-    } as jest.MockedObject<AuthenticationService>;
-
-    cacheService = {
-      set: jest.fn(),
-    } as jest.MockedObject<Cache>;
-
-    const testModule = await Test.createTestingModule({
+    moduleRef = await Test.createTestingModule({
       providers: [
         RefreshHandler,
         {
-          provide: AuthenticationService,
-          useValue: authService,
+          provide: CACHE_MANAGER,
+          useValue: mockCacheService,
         },
         {
-          provide: CACHE_MANAGER,
-          useValue: cacheService,
+          provide: AuthenticationService,
+          useValue: mockAuthService,
         },
       ],
     }).compile();
 
-    handler = testModule.get<RefreshHandler>(RefreshHandler);
+    handler = moduleRef.get<RefreshHandler>(RefreshHandler);
+  });
+
+  afterEach(async () => {
+    jest.clearAllMocks();
+    await moduleRef.close();
+  });
+
+  it('Should be defined', () => {
+    expect(handler).toBeDefined();
   });
 
   describe('execute', () => {
@@ -45,51 +51,78 @@ describe('RefreshHandler', () => {
       email: 'example@google.com',
       status: UserStatus.ACTIVE,
     };
-    const mockCommand = new RefreshCommand(mockReqUser);
-    const mockCacheKey = `refreshToken:${mockReqUser.email}`;
-    const mockTokens = {
-      accessToken: 'accessToken',
-      refreshToken: 'refreshToken',
-    };
+    const refreshCommand = new RefreshCommand(mockReqUser);
 
-    it('should successfully refresh tokens', async () => {
-      authService.generateToken.mockResolvedValue(mockTokens);
-      authService.getRefreshTokenCacheKey.mockReturnValue(mockCacheKey);
+    it('Should refresh token correctly', async () => {
+      mockAuthService.generateToken.mockResolvedValueOnce({
+        accessToken: 'access-token',
+        refreshToken: 'refresh-token',
+      });
+      mockAuthService.getRefreshTokenCacheKey.mockReturnValue(
+        `refreshToken:${mockReqUser.email}`,
+      );
 
-      const refreshResponse = await handler.execute(mockCommand);
+      const refreshResponse = await handler.execute(refreshCommand);
 
-      expect(refreshResponse).toEqual({ accessToken: mockTokens.accessToken });
-      expect(authService.generateToken).toHaveBeenCalledWith({
+      expect(refreshResponse).toBeDefined();
+      expect(refreshResponse).toEqual({
+        accessToken: 'access-token',
+      });
+      expect(mockAuthService.generateToken).toHaveBeenCalledTimes(1);
+      expect(mockAuthService.generateToken).toHaveBeenCalledWith({
         email: mockReqUser.email,
         id: mockReqUser.sub,
-        status: mockReqUser.status,
+        status: mockReqUser.status as UserStatus,
       });
-      expect(authService.getRefreshTokenCacheKey).toHaveBeenCalledWith(
+      expect(mockAuthService.getRefreshTokenCacheKey).toHaveBeenCalledTimes(1);
+      expect(mockAuthService.getRefreshTokenCacheKey).toHaveBeenCalledWith(
         mockReqUser.email,
       );
-      expect(cacheService.set).toHaveBeenCalledWith(
-        mockCacheKey,
-        mockTokens.refreshToken,
+      expect(mockCacheService.set).toHaveBeenCalledTimes(1);
+      expect(mockCacheService.set).toHaveBeenCalledWith(
+        `refreshToken:${mockReqUser.email}`,
+        'refresh-token',
         EXPIRATION_REFRESH_TOKEN_SECONDS,
       );
     });
 
-    it('should handle token generation failure', async () => {
-      const error = new Error('Token generation failed');
-      authService.generateToken.mockRejectedValue(error);
+    it('Should throw error if authentication service generate token failed', async () => {
+      mockAuthService.generateToken.mockRejectedValueOnce(
+        new Error('Something wrong!'),
+      );
 
-      await expect(handler.execute(mockCommand)).rejects.toThrow(error);
-      expect(cacheService.set).not.toHaveBeenCalled();
+      await expect(handler.execute(refreshCommand)).rejects.toThrow(
+        'Something wrong!',
+      );
+
+      expect(mockAuthService.getRefreshTokenCacheKey).not.toHaveBeenCalled();
+      expect(mockCacheService.set).not.toHaveBeenCalled();
     });
 
-    it('should handle cache service failure', async () => {
-      const error = new Error('Somethings wrong');
+    it('Should throw error if cache service failed', async () => {
+      mockAuthService.generateToken.mockResolvedValueOnce({
+        accessToken: 'access-token',
+        refreshToken: 'refresh-token',
+      });
+      mockAuthService.getRefreshTokenCacheKey.mockReturnValue(
+        `refreshToken:${mockReqUser.email}`,
+      );
+      mockCacheService.set.mockRejectedValueOnce(new Error('Something wrong!'));
 
-      authService.generateToken.mockResolvedValue(mockTokens);
-      authService.getRefreshTokenCacheKey.mockReturnValue(mockCacheKey);
-      cacheService.set.mockRejectedValue(error);
+      await expect(handler.execute(refreshCommand)).rejects.toThrow(
+        'Something wrong!',
+      );
 
-      await expect(handler.execute(mockCommand)).rejects.toThrow(error);
+      expect(mockAuthService.generateToken).toHaveBeenCalledTimes(1);
+      expect(mockAuthService.generateToken).toHaveBeenCalledWith({
+        email: mockReqUser.email,
+        id: mockReqUser.sub,
+        status: mockReqUser.status as UserStatus,
+      });
+      expect(mockAuthService.getRefreshTokenCacheKey).toHaveBeenCalledTimes(1);
+      expect(mockAuthService.getRefreshTokenCacheKey).toHaveBeenCalledWith(
+        mockReqUser.email,
+      );
     });
   });
 });

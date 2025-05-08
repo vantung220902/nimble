@@ -1,31 +1,40 @@
-import {
-  ControllerBase,
-  QueryEndpoint as QueryEndpointBase,
-} from '@common/cqrs';
+import { QueryEndpoint } from '@common/cqrs';
+import { Logger } from '@nestjs/common';
 import { QueryBus } from '@nestjs/cqrs';
 import { Test, TestingModule } from '@nestjs/testing';
 
 class MockQueryBus {}
+class TestQueryEndpoint extends QueryEndpoint {}
 
-class QueryEndpoint extends QueryEndpointBase {}
-
-describe('QueryEndpointCQRS', () => {
+describe('QueryEndpoint', () => {
   let queryEndpoint: QueryEndpoint;
+  let moduleRef: TestingModule;
 
   beforeEach(async () => {
-    const testModule: TestingModule = await Test.createTestingModule({
-      providers: [QueryEndpoint, { provide: QueryBus, useClass: MockQueryBus }],
+    moduleRef = await Test.createTestingModule({
+      providers: [
+        { provide: QueryBus, useClass: MockQueryBus },
+        { provide: QueryEndpoint, useClass: TestQueryEndpoint },
+      ],
     }).compile();
-
-    queryEndpoint = testModule.get<QueryEndpoint>(QueryEndpoint);
+    queryEndpoint = moduleRef.get<QueryEndpoint>(QueryEndpoint);
   });
 
-  it('should be defined', () => {
+  afterEach(async () => {
+    await moduleRef.close();
+  });
+
+  it('Should be defined', () => {
     expect(queryEndpoint).toBeDefined();
     expect(queryEndpoint).toBeInstanceOf(QueryEndpoint);
   });
 
-  it('should extend ControllerBase', () => {
-    expect(queryEndpoint).toBeInstanceOf(ControllerBase);
+  it('Should have logger instance exists', () => {
+    expect(queryEndpoint['logger']).toBeDefined();
+    expect(queryEndpoint['logger']).toBeInstanceOf(Logger);
+  });
+
+  it('Should have queryBus argument exits', () => {
+    expect(queryEndpoint['queryBus']).toBeDefined();
   });
 });

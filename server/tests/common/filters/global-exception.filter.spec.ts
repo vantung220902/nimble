@@ -1,6 +1,7 @@
 import { GlobalExceptionFilter } from '@common/filters';
-import { ArgumentsHost, HttpException } from '@nestjs/common';
-import { HttpArgumentsHost } from '@nestjs/common/interfaces';
+import { HttpException } from '@nestjs/common';
+import { ArgumentsHost, HttpArgumentsHost } from '@nestjs/common/interfaces';
+import { Request, Response } from 'express';
 import {
   anyNumber,
   anything,
@@ -12,52 +13,43 @@ import {
 } from 'ts-mockito';
 
 describe('GlobalExceptionFilter', () => {
-  const mockRequest = mock<any>();
-  const mockResponse = mock<any>();
-  const mockHttpArgumentsHost = mock<HttpArgumentsHost>();
+  const mockReq = mock<Request>();
+  const mockRes = mock<Response>();
+  const mockHttpArgumentHost = mock<HttpArgumentsHost>();
   const mockHost = mock<ArgumentsHost>();
 
   beforeEach(() => {
-    when(mockRequest.url).thenReturn('/path/to/api');
-
-    when(mockResponse.status(anyNumber())).thenCall(() =>
-      instance(mockResponse),
-    );
-    when(mockResponse.json(anything())).thenCall((arg) => arg);
-
-    when(mockHttpArgumentsHost.getRequest()).thenCall(() =>
-      instance(mockRequest),
-    );
-    when(mockHttpArgumentsHost.getResponse()).thenCall(() =>
-      instance(mockResponse),
-    );
-
+    when(mockReq.url).thenReturn('/path/to/api');
+    when(mockRes.status(anyNumber())).thenCall(() => instance(mockRes));
+    when(mockRes.json(anything())).thenCall((arg) => arg);
+    when(mockHttpArgumentHost.getRequest()).thenCall(() => instance(mockReq));
+    when(mockHttpArgumentHost.getResponse()).thenCall(() => instance(mockRes));
     when(mockHost.switchToHttp()).thenCall(() =>
-      instance(mockHttpArgumentsHost),
+      instance(mockHttpArgumentHost),
     );
   });
 
   afterEach(() => {
-    reset(mockRequest, mockResponse, mockHttpArgumentsHost, mockHost);
+    reset<any>(mockReq, mockRes, mockHttpArgumentHost, mockHost);
   });
 
-  test('should handle HttpException', () => {
-    const exception = new HttpException(
+  it('Should able to handle HttpException', () => {
+    const httpException = new HttpException(
       {
         errorId: 'error_id',
         message: 'message',
-        error: ['my_error'],
+        error: ['error'],
       },
       400,
     );
 
     const response = new GlobalExceptionFilter().catch(
-      exception,
+      httpException,
       instance(mockHost),
     );
 
-    verify(mockResponse.status(400)).once();
-    verify(mockResponse.json(anything())).once();
+    verify(mockRes.status(400)).once();
+    verify(mockRes.json(anything())).once();
 
     expect(response).toEqual(
       expect.objectContaining({
@@ -65,23 +57,24 @@ describe('GlobalExceptionFilter', () => {
         code: 400,
         errorId: 'error_id',
         message: 'message',
-        error: ['my_error'],
+        error: ['error'],
         path: '/path/to/api',
       }),
     );
+
     expect(response.timestamp).toBeGreaterThan(0);
   });
 
-  test('should handle any error', () => {
-    const error = new Error('something went wrong');
+  it('Should able to handle any error', () => {
+    const error = new Error('Something wrong!');
 
     const response = new GlobalExceptionFilter().catch(
       error,
       instance(mockHost),
     );
 
-    verify(mockResponse.status(500)).once();
-    verify(mockResponse.json(anything())).once();
+    verify(mockRes.status(500)).once();
+    verify(mockRes.json(anything())).once();
 
     expect(response).toEqual(
       expect.objectContaining({
@@ -89,15 +82,15 @@ describe('GlobalExceptionFilter', () => {
         code: 500,
         errorId: 'INTERNAL_SERVER_ERROR',
         message: 'Internal server error',
-        error: 'something went wrong',
+        error: 'Something wrong!',
         path: '/path/to/api',
       }),
     );
     expect(response.timestamp).toBeGreaterThan(0);
   });
 
-  test('should not include stacktrace by default', () => {
-    const error = new Error('something went wrong');
+  it('Should not include stacktrace by default', () => {
+    const error = new Error('Something wrong!');
 
     const response = new GlobalExceptionFilter().catch(
       error,
@@ -107,33 +100,34 @@ describe('GlobalExceptionFilter', () => {
     expect(response.stack).toBeUndefined();
   });
 
-  test('should include HttpException stacktrace if specified', () => {
-    const exception = new HttpException(
+  it('Should include HttpException stacktrace', () => {
+    const httpException = new HttpException(
       {
+        errorId: 'error_id',
         message: 'message',
-        error: ['my_error'],
+        error: ['error'],
       },
-      401,
+      400,
     );
 
     const response = new GlobalExceptionFilter({
       includeSensitive: true,
-    }).catch(exception, instance(mockHost));
+    }).catch(httpException, instance(mockHost));
 
     expect(response.stack).toBeDefined();
-    expect(Array.isArray(response.stack)).toBeTruthy();
+    expect(Array.isArray(response.stack)).toEqual(true);
     expect(response.stack.length).toBeGreaterThan(0);
   });
 
-  test('should include error stacktrace if specified', () => {
-    const error = new Error('something went wrong');
+  it('Should include error stacktrace', () => {
+    const error = new Error('Something wrong!');
 
     const response = new GlobalExceptionFilter({
       includeSensitive: true,
     }).catch(error, instance(mockHost));
 
     expect(response.stack).toBeDefined();
-    expect(Array.isArray(response.stack)).toBeTruthy();
+    expect(Array.isArray(response.stack)).toEqual(true);
     expect(response.stack.length).toBeGreaterThan(0);
   });
 });
