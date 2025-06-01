@@ -16,7 +16,7 @@ variable "vpc_id" {
 variable "node_type" {
   type        = string
   description = "The instance type of the redis instance"
-  default     = "cache.t2.small"
+  default     = "cache.t2.micro"
 }
 
 variable "parameter_group_name" {

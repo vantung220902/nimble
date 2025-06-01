@@ -22,5 +22,5 @@ inputs = {
   project_name    = local.project_name
   domain_name     = local.domain_name
   web_domain_name = "web.${local.domain_name}"
-  bucket_name     = "${local.project_name}-user-storage"
+  bucket_name     = "${local.project_name}-user-storage-22"
 }

@@ -3,17 +3,14 @@ locals {
   region_vars      = read_terragrunt_config(find_in_parent_folders("region.hcl"))
   account_vars     = read_terragrunt_config(find_in_parent_folders("account.hcl"))
 
-  environment           = local.environment_vars.locals.environment
-  project_name          = local.environment_vars.locals.project_name
-  aws_account_id        = local.account_vars.locals.aws_account_id
-  api_svc_repo          = local.environment_vars.locals.api_svc_repo
-  api_prefix            = local.environment_vars.locals.api_prefix
-  container_port        = local.environment_vars.locals.container_port
-  container_cpu         = local.environment_vars.locals.container_cpu
-  container_memory      = local.environment_vars.locals.container_memory
-  codebuild_role_arn    = local.environment_vars.locals.codebuild_role_arn
-  codepipeline_role_arn = local.environment_vars.locals.codepipeline_role_arn
-  codedeploy_role_arn   = local.environment_vars.locals.codedeploy_role_arn
+  environment      = local.environment_vars.locals.environment
+  project_name     = local.environment_vars.locals.project_name
+  aws_account_id   = local.account_vars.locals.aws_account_id
+  api_svc_repo     = local.environment_vars.locals.api_svc_repo
+  api_prefix       = local.environment_vars.locals.api_prefix
+  container_port   = local.environment_vars.locals.container_port
+  container_cpu    = local.environment_vars.locals.container_cpu
+  container_memory = local.environment_vars.locals.container_memory
 }
 
 terraform {
@@ -47,8 +44,17 @@ dependency "alb" {
   mock_outputs_allowed_terraform_commands = ["validate", "plan", "init"]
 }
 
+dependency "iam" {
+  config_path = find_in_parent_folders("iam")
+  mock_outputs = {
+    codedeploy_role_arn   = "arn:aws:iam::046704565145:role/CodeDeploy_ECS_Role"
+    codepipeline_role_arn = "arn:aws:iam::046704565145:role/CodePipeline_CodeDeploy_role"
+  }
+  mock_outputs_allowed_terraform_commands = ["validate", "plan", "init"]
+}
+
 dependencies {
-  paths = ["../vpc", "../ecs", "../alb"]
+  paths = ["../vpc", "../ecs", "../alb", "../iam"]
 }
 
 include {
@@ -60,8 +66,8 @@ inputs = {
   project_name                = local.project_name
   aws_account_id              = local.aws_account_id
   repo_name                   = local.api_svc_repo
-  codepipeline_role_arn       = local.codepipeline_role_arn
-  codedeploy_role_arn         = local.codedeploy_role_arn
+  codepipeline_role_arn       = dependency.iam.outputs.codepipeline_role_arn
+  codedeploy_role_arn         = dependency.iam.outputs.codedeploy_role_arn
   api_prefix                  = local.api_prefix
   routing_priority            = 2
   vpc_id                      = dependency.vpc.outputs.vpc_id

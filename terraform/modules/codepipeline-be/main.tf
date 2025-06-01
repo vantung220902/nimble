@@ -1,14 +1,56 @@
-data "template_file" "env_file" {
-  template = file("${path.module}/env.json")
-  vars = {
-    secret_manager_arn = var.secret_manager_arn
-    stage_build        = var.stage_build
-  }
-}
-
 resource "aws_s3_bucket" "codepipeline_bucket" {
   bucket        = "${var.project_name}-${var.repo_name}-${var.environment}-pp-log"
   force_destroy = true
+}
+
+resource "aws_s3_bucket" "artifact_store" {
+  bucket        = "${var.project_name}-${var.repo_name}-${var.environment}-artifact-ecs"
+  force_destroy = true
+}
+
+data "aws_iam_policy_document" "bucket_policy" {
+  statement {
+    sid    = "AllowGetPutDeleteObjects"
+    effect = "Allow"
+    principals {
+      type        = "AWS"
+      identifiers = ["arn:aws:iam::${var.aws_account_id}:user/terraform"]
+    }
+    actions = [
+      "s3:PutObjectAcl",
+      "s3:PutObject",
+      "s3:GetObjectAcl",
+      "s3:GetObject",
+      "s3:DeleteObject",
+      "s3:AbortMultipartUpload",
+    ]
+    resources = ["${aws_s3_bucket.artifact_store.arn}/*"]
+  }
+
+  statement {
+    sid    = "AllowListBucket"
+    effect = "Allow"
+    principals {
+      type        = "AWS"
+      identifiers = ["arn:aws:iam::${var.aws_account_id}:user/terraform"]
+    }
+    actions   = ["s3:ListBucket"]
+    resources = [aws_s3_bucket.artifact_store.arn]
+  }
+}
+
+
+resource "aws_s3_bucket_policy" "artifact_store" {
+  bucket = aws_s3_bucket.artifact_store.id
+  policy = data.aws_iam_policy_document.bucket_policy.json
+}
+
+
+resource "aws_s3_bucket_versioning" "versioning_artifact_store" {
+  bucket = aws_s3_bucket.artifact_store.id
+  versioning_configuration {
+    status = "Enabled"
+  }
 }
 
 resource "aws_s3_bucket_public_access_block" "codepipeline_bucket_access_block" {
@@ -32,36 +74,18 @@ resource "aws_codepipeline" "codepipeline" {
   stage {
     name = "Source"
     action {
-      name             = "Source"
+      name             = "S3Source"
       category         = "Source"
       owner            = "AWS"
-      provider         = "CodeStarSourceConnection"
+      provider         = "S3"
       version          = "1"
-      output_artifacts = ["SourceArtifact"]
+      run_order        = 1
+      output_artifacts = ["appspecartifact"]
 
       configuration = {
-        ConnectionArn    = var.code_star_arn
-        FullRepositoryId = "${var.github_path}/${var.repo_name}"
-        BranchName       = var.repo_branch
-        DetectChanges    = "true"
-      }
-
-    }
-  }
-
-  stage {
-    name = "Build"
-    action {
-      name             = var.codebuild_name
-      category         = "Build"
-      owner            = "AWS"
-      provider         = "CodeBuild"
-      input_artifacts  = ["SourceArtifact"]
-      output_artifacts = ["BuildArtifact"]
-      version          = "1"
-      configuration = {
-        ProjectName          = var.codebuild_name
-        EnvironmentVariables = data.template_file.env_file.rendered
+        PollForSourceChanges = "false"
+        S3Bucket             = aws_s3_bucket.artifact_store.id
+        S3ObjectKey          = "appspec.zip"
       }
     }
   }
@@ -74,16 +98,16 @@ resource "aws_codepipeline" "codepipeline" {
       category = "Deploy"
       owner    = "AWS"
       configuration = {
-        AppSpecTemplateArtifact        = "BuildArtifact"
+        AppSpecTemplateArtifact        = "appspecartifact"
         AppSpecTemplatePath            = "appspec.yml"
         ApplicationName                = "${var.project_name}-${var.repo_name}-application"
         DeploymentGroupName            = "${var.project_name}-${var.repo_name}-deploy-group"
-        Image1ArtifactName             = "BuildArtifact"
+        Image1ArtifactName             = "appspecartifact"
         Image1ContainerName            = "IMAGE1_NAME"
-        TaskDefinitionTemplateArtifact = "BuildArtifact"
+        TaskDefinitionTemplateArtifact = "appspecartifact"
         TaskDefinitionTemplatePath     = "taskdef.json"
       }
-      input_artifacts = ["BuildArtifact"]
+      input_artifacts = ["appspecartifact"]
       provider        = "CodeDeployToECS"
       version         = 1
       run_order       = 1

@@ -1,5 +1,5 @@
 locals {
-  instance_type = "t3a.nano"
+  instance_type = "t2.micro"
   public_id     = "0.0.0.0/0"
   local_id      = "127.0.0.1/32"
 }

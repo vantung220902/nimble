@@ -135,6 +135,7 @@ resource "aws_ssm_parameter" "api_key" {
   name  = "/${var.project_name}/${var.environment}/API_KEY"
   type  = "String"
   value = random_password.api_key.result
+  overwrite = true
 
   tags = {
     Environment = var.environment

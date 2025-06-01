@@ -27,7 +27,6 @@ resource "aws_iam_role" "ecs_task_execution_role" {
   }
 }
 
-
 resource "aws_iam_policy" "ecs_task_execution_policy" {
   name        = "ECS-Task-Execution-Policy${var.role_suffix}-${var.environment}"
   path        = "/"
