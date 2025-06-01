@@ -49,7 +49,7 @@ variable "is_forward_query_string" {
 variable "price_class" {
   type        = string
   description = "Cloudfront price class"
-  default     = "PriceClass_All"
+  default     = "PriceClass_100"
 }
 
 variable "is_ipv6" {

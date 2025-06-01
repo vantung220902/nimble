@@ -10,7 +10,7 @@ locals {
   jumpbox_allowed_ips   = ["0.0.0.0/0"]
   ami_id                = "ami-084568db4383264d4"
   domain_name           = "nimble.tunnguyenv.cloud"
-  route53_zone_id       = "Z06057285PY5BOVF1MPD"
+  route53_zone_id       = "Z04478463TXT2HAF39JL6"
   bucket_name           = "nimble-web-app-22"
   code_star_arn         = "arn:aws:codeconnections:us-east-1:097306077001:connection/6cc0672c-de8c-4a7b-8d6c-65de646baca7"
   webapp_repo           = "nimble-client"

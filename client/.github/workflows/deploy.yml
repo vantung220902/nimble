@@ -1,0 +1,76 @@
+name: Deploy
+
+on:
+  pull_request:
+    branches:
+      - develop
+    types:
+      - closed
+  push:
+    branches:
+      - develop
+
+jobs:
+  build:
+    name: Set env and build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
+    environment: Nimble
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        run: |
+          npm install -g pnpm@9.4.0
+          pnpm install
+
+      - name: Put .env
+        run: |
+          echo "VITE_WEB_URL=${{ vars.VITE_WEB_URL }}" >> .env
+          echo "VITE_API_URL=${{ vars.VITE_API_URL }}" >> .env
+          echo "VITE_COOKIE_DOMAIN=${{ vars.VITE_COOKIE_DOMAIN }}" >> .env
+          echo "VITE_AWS_S3_WEB_STORAGE_ASSETS_URL=${{ vars.VITE_AWS_S3_WEB_STORAGE_ASSETS_URL }}" >> .env
+          cat .env
+
+      - name: Build
+        run: pnpm build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  deploy:
+    name: Deploy to S3
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
+    environment: Nimble
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Sync to S3
+        run: aws s3 sync dist ${{ vars.AWS_S3_WEB_URL }} --delete
+
+      - name: Invalidate Cloudfront
+        run: aws cloudfront create-invalidation --distribution-id ${{ vars.AWS_WEB_CLOUDFRONT_DISTRIBUTION_ID }} --paths '/*'
+
+      - name: Notify completion
+        run: echo "Deployment completed successfully"

@@ -67,7 +67,7 @@ data "aws_iam_policy_document" "iam_allow_access_to_s3" {
     effect = "Allow"
     principals {
       type        = "AWS"
-      identifiers = ["arn:aws:iam::${var.aws_account_id}:user/terraform_admin"]
+      identifiers = ["arn:aws:iam::${var.aws_account_id}:user/terraform"]
     }
     actions = [
       "s3:GetObject",
@@ -84,7 +84,7 @@ data "aws_iam_policy_document" "iam_allow_access_to_s3" {
     effect = "Allow"
     principals {
       type        = "AWS"
-      identifiers = ["arn:aws:iam::${var.aws_account_id}:user/terraform_admin"]
+      identifiers = ["arn:aws:iam::${var.aws_account_id}:user/terraform"]
     }
     actions   = ["s3:ListBucket"]
     resources = ["${aws_s3_bucket.s3_bucket.arn}"]
